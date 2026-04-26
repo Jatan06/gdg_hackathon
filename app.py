@@ -24,7 +24,7 @@ load_dotenv()
 # Ensure you have a 'mock_hospitals.csv' in the same directory with columns: 
 # ['name', 'latitude', 'longitude', 'capabilities']
 try:
-    df_hospitals = pd.read_csv("mock_hospitals.csv")
+    df_hospitals = pd.read_csv("mock_datasets.csv")
     
     # --- THE FIX: Force lat/lon to be numbers, not strings ---
     df_hospitals['latitude'] = pd.to_numeric(df_hospitals['latitude'], errors='coerce')
@@ -33,6 +33,16 @@ try:
     # Drop any rows where the CSV had blank or corrupted coordinates
     df_hospitals = df_hospitals.dropna(subset=['latitude', 'longitude'])
     
+    # Map columns to match expected schema
+    if 'Hospital_Name' in df_hospitals.columns:
+        df_hospitals = df_hospitals.rename(columns={'Hospital_Name': 'name'})
+    
+    # Combine Specialties and Facilities into capabilities for vector search
+    if 'Specialties' in df_hospitals.columns and 'Facilities' in df_hospitals.columns:
+        df_hospitals['capabilities'] = df_hospitals['Specialties'].fillna('') + ", " + df_hospitals['Facilities'].fillna('')
+    elif 'capabilities' not in df_hospitals.columns:
+        df_hospitals['capabilities'] = "General Hospital"
+        
 except FileNotFoundError:
     # Dummy data fallback so the server doesn't crash if the CSV is missing during testing
     print("Warning: mock_hospitals.csv not found. Using fallback dummy data.")
@@ -75,6 +85,8 @@ class HospitalMatch(BaseModel):
     hospital_name: str
     distance_km: float
     matched_capabilities: str
+    latitude: float
+    longitude: float
 
 # New Output Schema: Combines the AI's triage with the Geospatial Match
 class DispatchResponse(BaseModel):
@@ -127,7 +139,12 @@ def dispatch_best_hospital(user_lat, user_lon, required_resources: List[str]) ->
         docs.append(
             Document(
                 page_content=row['capabilities'], 
-                metadata={"name": row['name'], "distance": row['distance_km']}
+                metadata={
+                    "name": row['name'],
+                    "distance": row['distance_km'],
+                    "latitude": row['latitude'],
+                    "longitude": row['longitude']
+                }
             )
         )
     
@@ -140,7 +157,9 @@ def dispatch_best_hospital(user_lat, user_lon, required_resources: List[str]) ->
     return {
         "hospital_name": best_match.metadata['name'],
         "distance_km": round(best_match.metadata['distance'], 2),
-        "matched_capabilities": best_match.page_content
+        "matched_capabilities": best_match.page_content,
+        "latitude": best_match.metadata['latitude'],
+        "longitude": best_match.metadata['longitude']
     }
 
 # ==========================================
