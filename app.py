@@ -24,7 +24,6 @@ load_dotenv()
 # Ensure you have a 'mock_hospitals.csv' in the same directory with columns: 
 # ['name', 'latitude', 'longitude', 'capabilities']
 try:
-    # 1. Load the file
     df_hospitals = pd.read_csv("mock_datasets.csv")
     
     # 2. Rename the column to match our code
@@ -43,7 +42,17 @@ try:
     
     # 5. Drop any rows with broken GPS coordinates
     df_hospitals = df_hospitals.dropna(subset=['latitude', 'longitude'])
-
+    
+    # Map columns to match expected schema
+    if 'Hospital_Name' in df_hospitals.columns:
+        df_hospitals = df_hospitals.rename(columns={'Hospital_Name': 'name'})
+    
+    # Combine Specialties and Facilities into capabilities for vector search
+    if 'Specialties' in df_hospitals.columns and 'Facilities' in df_hospitals.columns:
+        df_hospitals['capabilities'] = df_hospitals['Specialties'].fillna('') + ", " + df_hospitals['Facilities'].fillna('')
+    elif 'capabilities' not in df_hospitals.columns:
+        df_hospitals['capabilities'] = "General Hospital"
+        
 except FileNotFoundError:
     print("CRITICAL WARNING: mock_hospitals.csv not found in the directory! Using fallback dummy data.")
     df_hospitals = pd.DataFrame({
@@ -130,7 +139,9 @@ class HospitalMatch(BaseModel):
     hospital_name: str
     distance_km: float
     matched_capabilities: str
-    ai_reasoning: str
+    latitude: float
+    longitude: float
+
 # New Output Schema: Combines the AI's triage with the Geospatial Match
 class DispatchResponse(BaseModel):
     triage_analysis: EmergencyPayload
@@ -184,10 +195,25 @@ def dispatch_best_hospital(user_lat, user_lon, required_resources: List[str]) ->
     # 2. FILTER: Grab the 5 absolute closest hospitals
     closest_5 = df_hospitals.nsmallest(5, 'distance_km')
     
-    # 3. FORMAT FOR THE LLM: Turn the Pandas rows into a clean string
-    hospitals_text = ""
-    for index, row in closest_5.iterrows():
-        hospitals_text += f"- Name: {row['name']} | Distance: {row['distance_km']:.2f} km | Stated Capabilities: {row['capabilities']}\n"
+    # EDGE CASE: User is stranded on a highway and NO hospitals are within 25km.
+    if local_hospitals.empty:
+        # Fallback: Just grab the 5 absolute closest ones, regardless of distance
+        local_hospitals = df_hospitals.nsmallest(5, 'distance_km')
+
+    # 3. VECTOR SECOND: Convert the local slice to LangChain Documents
+    docs = []
+    for _, row in local_hospitals.iterrows():
+        docs.append(
+            Document(
+                page_content=row['capabilities'], 
+                metadata={
+                    "name": row['name'],
+                    "distance": row['distance_km'],
+                    "latitude": row['latitude'],
+                    "longitude": row['longitude']
+                }
+            )
+        )
     
     # 4. AGENTIC MATCHMAKING: Ask Gemini to figure out the best fit
     decision = matchmaker_chain.invoke({
@@ -226,10 +252,11 @@ def dispatch_best_fire_station(user_lat, user_lon, required_resources: List[str]
     chosen_row = closest_5[closest_5['name'] == decision.unit_name].iloc[0]
     
     return {
-        "unit_name": decision.unit_name,
-        "distance_km": round(chosen_row['distance_km'], 2),
-        "matched_capabilities": chosen_row['capabilities'],
-        "ai_reasoning": decision.reasoning
+        "hospital_name": best_match.metadata['name'],
+        "distance_km": round(best_match.metadata['distance'], 2),
+        "matched_capabilities": best_match.page_content,
+        "latitude": best_match.metadata['latitude'],
+        "longitude": best_match.metadata['longitude']
     }
 
 def dispatch_best_police_station(user_lat, user_lon, required_resources: List[str]) -> dict:

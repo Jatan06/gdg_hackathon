@@ -1,258 +1,577 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hospitality Crisis Dispatcher</title>
+    <title>Emergency SOS Portal</title>
     <style>
         :root {
-            --bg-color: #0f172a;
+            --bg-dark: #0f172a;
             --panel-bg: #1e293b;
-            --text-main: #f8fafc;
+            --text-light: #f8fafc;
             --text-muted: #94a3b8;
             --accent-red: #ef4444;
             --accent-red-hover: #dc2626;
+            --accent-blue: #3b82f6;
+            --accent-blue-hover: #2563eb;
             --border-color: #334155;
+            --font-main: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-family: var(--font-main);
         }
 
         body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
+            background-color: var(--bg-dark);
+            color: var(--text-light);
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            background-color: var(--panel-bg);
-            width: 100%;
-            max-width: 600px;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
             overflow: hidden;
         }
 
-        .header {
-            background-color: #020617;
-            padding: 20px;
-            border-bottom: 2px solid var(--accent-red);
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: 1.5rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--accent-red);
-        }
-
-        .content {
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .input-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        label {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: var(--text-muted);
-        }
-
-        textarea {
+        /* Container for everything */
+        .app-container {
             width: 100%;
-            height: 100px;
-            background-color: #0f172a;
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 12px;
-            font-size: 1rem;
+            max-width: 500px;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        /* Step Management */
+        .step {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .step.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1.8rem;
+            margin-bottom: 24px;
+            font-weight: 700;
+        }
+
+        /* ======================== 
+           STEP 1: SOS BUTTON 
+           ======================== */
+        .sos-button-wrapper {
+            position: relative;
+            margin-top: 40px;
+        }
+
+        .sos-button {
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #ef4444, #b91c1c);
+            color: white;
+            font-size: 5rem;
+            font-weight: 900;
+            border: 10px solid #fee2e2;
+            cursor: pointer;
+            box-shadow: 0 0 60px rgba(239, 68, 68, 0.5), inset 0px -8px 20px rgba(0, 0, 0, 0.3);
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s, box-shadow 0.2s;
+            z-index: 10;
+            position: relative;
+        }
+
+        .sos-button:active {
+            transform: scale(0.95);
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.7), inset 0px -15px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Flashing rings behind the button */
+        .sos-ripple {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: rgba(239, 68, 68, 0.4);
+            z-index: 1;
+            animation: ripple 2s infinite ease-out;
+            pointer-events: none;
+        }
+
+        .sos-ripple:nth-child(2) {
+            animation-delay: 1s;
+        }
+
+        @keyframes ripple {
+            0% {
+                width: 260px;
+                height: 260px;
+                opacity: 1;
+            }
+
+            100% {
+                width: 500px;
+                height: 500px;
+                opacity: 0;
+            }
+        }
+
+        /* ======================== 
+           STEP 2, 3, 4: Forms
+           ======================== */
+        .option-btn {
+            background-color: var(--panel-bg);
+            color: var(--text-light);
+            border: 2px solid var(--border-color);
+            width: 100%;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .option-btn:hover {
+            border-color: var(--accent-red);
+            background-color: rgba(239, 68, 68, 0.1);
+        }
+
+        textarea,
+        input[type="text"] {
+            width: 100%;
+            background-color: var(--bg-dark);
+            border: 2px solid var(--border-color);
+            color: var(--text-light);
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
             resize: vertical;
         }
 
-        textarea:focus {
+        textarea:focus,
+        input[type="text"]:focus {
             outline: none;
-            border-color: var(--accent-red);
+            border-color: var(--accent-blue);
         }
 
-        .gps-dummy {
-            display: flex;
-            gap: 12px;
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            width: 100%;
         }
 
-        .gps-dummy input {
-            flex: 1;
-            background-color: #0f172a;
-            color: var(--text-muted);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 8px;
-            font-size: 0.85rem;
-        }
-
-        button {
-            background-color: var(--accent-red);
-            color: white;
-            border: none;
-            padding: 14px;
-            border-radius: 8px;
+        .btn {
+            padding: 16px;
+            border-radius: 12px;
             font-size: 1.1rem;
             font-weight: bold;
+            border: none;
             cursor: pointer;
-            transition: background-color 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            transition: 0.2s;
         }
 
-        button:hover {
+        .btn-blue {
+            background-color: var(--accent-blue);
+            color: white;
+            width: 100%;
+        }
+
+        .btn-blue:hover {
+            background-color: var(--accent-blue-hover);
+        }
+
+        .btn-red {
+            background-color: var(--accent-red);
+            color: white;
+            width: 100%;
+        }
+
+        .btn-red:hover {
             background-color: var(--accent-red-hover);
         }
 
-        button:disabled {
-            background-color: var(--border-color);
-            cursor: not-allowed;
+        .btn-outline {
+            background-color: transparent;
+            border: 2px solid var(--text-muted);
+            color: var(--text-muted);
+            margin-top: 20px;
+            width: auto;
+            padding: 10px 24px;
         }
 
-        .output-section {
-            margin-top: 10px;
-            background-color: #020617;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 16px;
-            display: none; /* Hidden by default */
+        .btn-outline:hover {
+            color: var(--text-light);
+            border-color: var(--text-light);
+        }
+
+        .mic-btn {
+            background-color: var(--panel-bg);
+            border: 2px solid var(--border-color);
+            color: var(--text-light);
+            padding: 12px;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 0 auto 24px auto;
+            cursor: pointer;
+            width: fit-content;
+            font-size: 1rem;
+        }
+
+        .mic-btn.listening {
+            background-color: rgba(239, 68, 68, 0.2);
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+            animation: pulse-mic 1s infinite;
+        }
+
+        @keyframes pulse-mic {
+            0% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+
+        .status-text {
+            color: #34d399;
+            /* Green */
+            font-size: 0.95rem;
+            margin-bottom: 20px;
+            min-height: 20px;
+        }
+
+        /* ======================== 
+           STEP 5: Sending animation
+           ======================== */
+        .radar-spinner {
+            width: 80px;
+            height: 80px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--accent-red);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 30px auto;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         pre {
+            background: #020617;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
             color: #34d399;
-            font-size: 0.9rem;
+            text-align: left;
+            font-size: 0.85rem;
             white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-
-        /* Simple loading spinner text */
-        .loading {
-            text-align: center;
-            color: var(--accent-red);
-            font-weight: bold;
-            display: none;
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+            word-break: break-word;
+            margin-top: 20px;
+            width: 100%;
         }
     </style>
 </head>
+
 <body>
 
-    <div class="container">
-        <div class="header">
-            <h1>🚨 Crisis Dispatcher</h1>
-        </div>
-        
-        <div class="content">
-            <div class="input-group">
-                <label>Current Location (Dummy Data)</label>
-                <div class="gps-dummy">
-                    <input type="text" id="lat" value="18.9681978" title="Latitude">
-                    <input type="text" id="lon" value="72.8072647" title="Longitude">
-                </div>
-            </div>
+    <div class="app-container">
 
-            <div class="input-group">
-                <label for="description">Emergency Situation Report</label>
-                <textarea id="description" placeholder="E.g., Massive grease fire in the main kitchen of the Grand Hotel. Three chefs have severe burns."></textarea>
-            </div>
+        <!-- STEP 1: HOME -->
+        <div id="step-home" class="step active">
+            <h1 style="color: var(--accent-red); letter-spacing: 2px; margin-bottom: 10px;">EMERGENCY PORTAL</h1>
+            <p style="color: var(--text-muted); font-size: 1.1rem;">Press the button below for immediate assistance</p>
 
-            <button id="dispatchBtn" onclick="sendTriageRequest()">Analyze & Dispatch Vectors</button>
-            
-            <div id="loadingIndicator" class="loading">Analyzing Crisis Parameters via AI...</div>
-
-            <div class="output-section" id="outputSection">
-                <label style="color: white; margin-bottom: 8px; display: block;">Structured API Response:</label>
-                <pre id="jsonOutput"></pre>
+            <div class="sos-button-wrapper">
+                <div class="sos-ripple"></div>
+                <div class="sos-ripple"></div>
+                <button class="sos-button" onclick="goToStep('step-type')">SOS</button>
             </div>
         </div>
+
+
+        <!-- STEP 2: CRISIS TYPE -->
+        <div id="step-type" class="step">
+            <h2>What's your emergency?</h2>
+
+            <button class="option-btn" onclick="selectType('Fire Accident')">
+                🔥 Fire Accident
+            </button>
+            <button class="option-btn" onclick="selectType('Medical / Any Emergency')">
+                🚑 Medical / Other Emergency
+            </button>
+
+            <button class="btn btn-outline" onclick="goToStep('step-home')">Cancel</button>
+        </div>
+
+
+        <!-- STEP 3: DETAILS & MIC -->
+        <div id="step-input" class="step">
+            <h2>Provide Details</h2>
+            <p id="display-type" style="color: var(--accent-red); font-weight: bold; margin-bottom: 15px;">Target:
+                Unknown</p>
+
+            <textarea id="emergency-text" rows="4"
+                placeholder="Briefly describe the situation (e.g. 'Huge grease fire in kitchen, 2 people trapped...')"></textarea>
+
+            <button class="mic-btn" id="mic-btn" onclick="toggleMic()">
+                🎤 <span>Tap to Speak</span>
+            </button>
+
+            <button class="btn btn-blue" onclick="goToStep('step-location')">Continue ➔</button>
+            <button class="btn btn-outline" onclick="goToStep('step-type')">Back</button>
+        </div>
+
+
+        <!-- STEP 4: LOCATION -->
+        <div id="step-location" class="step">
+            <h2>Where are you?</h2>
+
+            <button class="btn btn-blue" style="margin-bottom: 15px;" onclick="detectGPS()">
+                📍 Auto-Detect Live GPS
+            </button>
+
+            <div id="gps-status" class="status-text"></div>
+
+            <p style="color: var(--text-muted); margin: 10px 0;">— OR ENTER MANUALLY —</p>
+
+            <input type="text" id="manual-location" placeholder="e.g. Times Square, near the red stairs">
+
+            <button class="btn btn-red" style="margin-top:20px; font-size: 1.3rem; letter-spacing: 1px;"
+                onclick="sendToLLM()">
+                🚨 ROUTE TO HOSPITAL
+            </button>
+
+            <button class="btn btn-outline" onclick="goToStep('step-input')">Back</button>
+        </div>
+
+
+        <!-- STEP 5: MOCK AI/BACKEND PROCESSING -->
+        <div id="step-processing" class="step">
+            <div class="radar-spinner"></div>
+            <h2>Analyzing via LLM...</h2>
+            <p style="color: var(--text-muted);">Predicting vectors and finding the nearest equipped hospital.</p>
+
+            <!-- This shows what WOULD be sent to the actual app.py -->
+            <pre id="mock-payload" style="display:none;"></pre>
+
+            <button class="btn btn-outline" id="restart-btn" style="display:none; margin-top:20px;"
+                onclick="location.reload()">Start Over</button>
+        </div>
+
     </div>
 
     <script>
-        async function sendTriageRequest() {
-            const btn = document.getElementById('dispatchBtn');
-            const loading = document.getElementById('loadingIndicator');
-            const outputSection = document.getElementById('outputSection');
-            const jsonOutput = document.getElementById('jsonOutput');
-            const description = document.getElementById('description').value;
+        // App State
+        const EmergencyState = {
+            type: '',
+            details: '',
+            lat: null,
+            lng: null,
+            manualAddress: ''
+        };
 
-            // Basic validation
-            if (!description.trim()) {
-                alert("Please enter a situation description.");
+        let isListening = false;
+        let recognition;
+
+        // Initialize Speech Recognition if supported
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRec();
+            recognition.continuous = false;
+            recognition.interimResults = true;
+
+            recognition.onresult = (event) => {
+                const transcript = Array.from(event.results)
+                    .map(result => result[0].transcript)
+                    .join('');
+                document.getElementById('emergency-text').value = transcript;
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech error", event);
+                stopMic();
+                alert("Mic error: " + event.error);
+            };
+
+            recognition.onend = () => {
+                stopMic();
+            };
+        }
+
+        // Navigation
+        function goToStep(stepId) {
+            document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+            document.getElementById(stepId).classList.add('active');
+        }
+
+        // Step 2 Logic
+        function selectType(type) {
+            EmergencyState.type = type;
+            document.getElementById('display-type').innerText = `Category: ${type}`;
+            goToStep('step-input');
+        }
+
+        // Step 3 Logic (Mic)
+        function toggleMic() {
+            if (!recognition) {
+                alert("Speech Recognition not supported in this browser.");
                 return;
             }
 
-            // Get dummy coordinates
-            const lat = parseFloat(document.getElementById('lat').value);
-            const lon = parseFloat(document.getElementById('lon').value);
-
-            // UI State updates (Loading...)
-            btn.disabled = true;
-            loading.style.display = "block";
-            outputSection.style.display = "none";
-            jsonOutput.innerText = "";
-
-            try {
-                // Call your local FastAPI server
-                const response = await fetch('http://127.0.0.1:8000/api/v1/triage', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        latitude: lat,
-                        longitude: lon,
-                        description: description
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Server Error: ${response.status}`);
-                }
-
-                const data = await response.json();
-                
-                // Show the successful JSON response
-                jsonOutput.innerText = JSON.stringify(data, null, 2);
-                outputSection.style.display = "block";
-
-            } catch (error) {
-                // Handle errors (e.g., FastAPI is not running)
-                jsonOutput.innerText = `Error connecting to backend:\n\n${error.message}\n\nMake sure your FastAPI server is running on http://127.0.0.1:8000!`;
-                jsonOutput.style.color = "#ef4444"; // red error text
-                outputSection.style.display = "block";
-            } finally {
-                // Reset UI State
-                btn.disabled = false;
-                loading.style.display = "none";
+            if (isListening) {
+                recognition.stop();
+                stopMic();
+            } else {
+                document.getElementById('emergency-text').value = '';
+                recognition.start();
+                isListening = true;
+                const btn = document.getElementById('mic-btn');
+                btn.classList.add('listening');
+                btn.querySelector('span').innerText = 'Listening... (Tap to stop)';
             }
         }
+
+        function stopMic() {
+            isListening = false;
+            const btn = document.getElementById('mic-btn');
+            btn.classList.remove('listening');
+            btn.querySelector('span').innerText = 'Tap to Speak';
+        }
+
+        // Step 4 Logic (GPS)
+        function detectGPS() {
+            const status = document.getElementById('gps-status');
+            status.style.color = "var(--text-muted)";
+            status.innerText = "Locating...";
+
+            if (!navigator.geolocation) {
+                status.style.color = "var(--accent-red)";
+                status.innerText = "Geolocation is not supported by your browser.";
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    EmergencyState.lat = position.coords.latitude;
+                    EmergencyState.lng = position.coords.longitude;
+                    status.style.color = "#34d399";
+                    status.innerText = `✅ Coordinates locked: ${EmergencyState.lat.toFixed(4)}, ${EmergencyState.lng.toFixed(4)}`;
+                    document.getElementById('manual-location').disabled = true;
+                    document.getElementById('manual-location').value = "Auto-detected GPS";
+                },
+                (error) => {
+                    status.style.color = "var(--accent-red)";
+                    status.innerText = "Error: Please allow location or type manually.";
+                }
+            );
+        }
+
+        // Step 5 Logic (Simulate Submission)
+        function sendToLLM() {
+            EmergencyState.details = document.getElementById('emergency-text').value.trim();
+            const manLoc = document.getElementById('manual-location').value.trim();
+
+            if (manLoc !== "Auto-detected GPS") {
+                EmergencyState.manualAddress = manLoc;
+                // Clear lat/lng if user typed manual override
+                EmergencyState.lat = null;
+                EmergencyState.lng = null;
+            }
+
+            if (!EmergencyState.details) {
+                alert("Please provide at least some details about the emergency.");
+                goToStep('step-input');
+                return;
+            }
+
+            if (!EmergencyState.lat && !EmergencyState.manualAddress) {
+                alert("Please provide a location (auto-detect or type manually).");
+                return;
+            }
+
+            // Show processing screen
+            goToStep('step-processing');
+
+            // Simulate API call delay
+            setTimeout(() => {
+                const h2 = document.querySelector('#step-processing h2');
+                const p = document.querySelector('#step-processing p');
+                const pre = document.getElementById('mock-payload');
+                const radar = document.querySelector('.radar-spinner');
+
+                radar.style.display = "none";
+                h2.innerText = "Dispatched Successfully";
+                h2.style.color = "#34d399";
+                p.innerText = "The LLM processed the triage and routed this directly to the best-matched hospital vector.";
+
+                // Show exactly what the backend would receive/produce 
+                // (Connecting to the app.py schema)
+                const payload = {
+                    sent_to_backend: {
+                        latitude: EmergencyState.lat || 0.0,
+                        longitude: EmergencyState.lng || 0.0,
+                        description: `[${EmergencyState.type}] ${EmergencyState.details}. Location Note: ${EmergencyState.manualAddress}`
+                    },
+                    mock_llm_triage_output: {
+                        crisis_category: EmergencyState.type.includes("Fire") ? "FIRE" : "MEDICAL",
+                        severity_level: "CRITICAL",
+                        estimated_victims: 2,
+                        resource_vector: ["advanced_life_support_ambulance", "trauma_surgeon"],
+                        tts_summary: "A critical incident has occurred. Units dispatched."
+                    }
+                };
+
+                pre.innerText = JSON.stringify(payload, null, 2);
+                pre.style.display = "block";
+
+                document.getElementById('restart-btn').style.display = "inline-block";
+
+            }, 3000);
+        }
     </script>
+
 </body>
+
 </html>
