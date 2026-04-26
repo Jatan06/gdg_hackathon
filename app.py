@@ -6,17 +6,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Literal
 from dotenv import load_dotenv
-from langchain_huggingface import HuggingFaceEmbeddings,HuggingFaceEndpointEmbeddings
-
-
+from langchain_huggingface import HuggingFaceEndpointEmbeddings
 # LangChain Imports
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
-
 load_dotenv()
-
 # ==========================================
 # 1. INITIALIZE DATA & MODELS
 # ==========================================
@@ -24,25 +20,34 @@ load_dotenv()
 # Ensure you have a 'mock_hospitals.csv' in the same directory with columns: 
 # ['name', 'latitude', 'longitude', 'capabilities']
 try:
-    df_hospitals = pd.read_csv("mock_hospitals.csv")
+    # 1. Load the file
+    df_hospitals = pd.read_csv("mock_datasets.csv")
     
-    # --- THE FIX: Force lat/lon to be numbers, not strings ---
+    # 2. Rename the column to match our code
+    df_hospitals = df_hospitals.rename(columns={
+        "Hospital_Name": "name"
+    })
+    
+    # 3. Merge 'Specialties' and 'Facilities' into one giant 'capabilities' string for Gemini
+    # We use fillna('') just in case a hospital left one of those columns blank
+    df_hospitals['capabilities'] = df_hospitals['Specialties'].astype(str).fillna('') + ", " + df_hospitals['Facilities'].astype(str).fillna('')
+    
+    # 4. Force lat/lon to be pure numbers
+    # Note: This will catch the word "Error" in row 1 (Holy Family) and turn it into NaN
     df_hospitals['latitude'] = pd.to_numeric(df_hospitals['latitude'], errors='coerce')
     df_hospitals['longitude'] = pd.to_numeric(df_hospitals['longitude'], errors='coerce')
     
-    # Drop any rows where the CSV had blank or corrupted coordinates
+    # 5. Drop any rows with broken GPS coordinates
     df_hospitals = df_hospitals.dropna(subset=['latitude', 'longitude'])
-    
+
 except FileNotFoundError:
-    # Dummy data fallback so the server doesn't crash if the CSV is missing during testing
-    print("Warning: mock_hospitals.csv not found. Using fallback dummy data.")
+    print("CRITICAL WARNING: mock_hospitals.csv not found in the directory! Using fallback dummy data.")
     df_hospitals = pd.DataFrame({
         "name": ["City General", "Apollo Highway Care", "Metro Burn Center"],
         "latitude": [23.0225, 23.5000, 23.0300],
         "longitude": [72.5714, 72.6000, 72.5800],
         "capabilities": ["basic trauma, bcls_ambulance", "oxygen_respirators, trauma_surgeon", "burn_unit, advanced_life_support_ambulance"]
     })
-
 # Initialize the LLM for Triage and the Embedding model for FAISS
 llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0, max_retries=2)
 embeddings_model = HuggingFaceEndpointEmbeddings(
@@ -57,12 +62,10 @@ class EmergencyRequest(BaseModel):
     latitude: float = Field(..., description="GPS Latitude from the frontend device")
     longitude: float = Field(..., description="GPS Longitude from the frontend device")
     description: str = Field(..., description="The user's frantic text or transcribed voice report")
-
 class LocationMetadata(BaseModel):
     latitude: float = Field(description="The GPS latitude.")
     longitude: float = Field(description="The GPS longitude.")
     venue_specifics: str = Field(description="Exact location details. If none, say 'Unknown'.")
-
 class EmergencyPayload(BaseModel):
     crisis_category: Literal["MEDICAL", "FIRE", "SECURITY", "CHEMICAL", "STRUCTURAL", "NATURAL_DISASTER"]
     severity_level: Literal["LOW", "MODERATE", "HIGH", "CRITICAL", "MASS_CASUALTY"]
@@ -70,31 +73,42 @@ class EmergencyPayload(BaseModel):
     estimated_victims: int
     resource_vector: List[str] = Field(description="List of 1-5 specific medical/physical resources needed.")
     tts_summary: str = Field(description="A concise, urgent 2-sentence summary for a TTS robot.")
+class HospitalDecision(BaseModel):
+    hospital_name: str = Field(description="The exact name of the chosen hospital from the provided list.")
+    reasoning: str = Field(description="A 1-sentence explanation of why this hospital's vague capabilities imply they can handle the needed resources.")
 
 class HospitalMatch(BaseModel):
     hospital_name: str
     distance_km: float
     matched_capabilities: str
-
+    ai_reasoning: str
 # New Output Schema: Combines the AI's triage with the Geospatial Match
 class DispatchResponse(BaseModel):
     triage_analysis: EmergencyPayload
     dispatched_hospital: HospitalMatch
-
 # ==========================================
 # 3. LANGCHAIN TRIAGE SETUP
 # ==========================================
-structured_llm = llm.with_structured_output(EmergencyPayload)
+# --- NEW: MATCHMAKER CHAIN ---
+matchmaker_llm = llm.with_structured_output(HospitalDecision)
 
+matchmaker_prompt = ChatPromptTemplate.from_messages([
+    ("system", "You are an expert medical logistics AI. "
+               "You are given a list of Required Resources for an emergency, and a list of the 5 closest hospitals with brief, vague capabilities. "
+               "Using your deep medical knowledge, deduce which hospital is most likely equipped to handle the resources needed. "
+               "Choose the closest one if multiple are equally capable."),
+    ("human", "Required Resources: {resources}\n\nNearby Hospitals:\n{hospitals_list}")
+])
+
+matchmaker_chain = matchmaker_prompt | matchmaker_llm
+structured_llm = llm.with_structured_output(EmergencyPayload)
 prompt = ChatPromptTemplate.from_messages([
     ("system", "You are an expert emergency dispatch AI for a hospitality crisis coordination system. "
                "Extract the incident details from the frantic user report and structure them perfectly. "
                "Use the provided GPS coordinates for the location data."),
     ("human", "Latitude: {lat}\nLongitude: {lon}\nReport: {user_report}")
 ])
-
 triage_chain = prompt | structured_llm
-
 # ==========================================
 # 4. GEOSPATIAL & VECTOR SEARCH LOGIC
 # ==========================================
@@ -113,41 +127,33 @@ def dispatch_best_hospital(user_lat, user_lon, required_resources: List[str]) ->
         user_lat, user_lon, df_hospitals['latitude'], df_hospitals['longitude']
     )
     
-    # 2. FILTER: Take all hospitals strictly within a 25 km radius
-    local_hospitals = df_hospitals[df_hospitals['distance_km'] <= 25.0]
+    # 2. FILTER: Grab the 5 absolute closest hospitals
+    closest_5 = df_hospitals.nsmallest(5, 'distance_km')
     
-    # EDGE CASE: User is stranded on a highway and NO hospitals are within 25km.
-    if local_hospitals.empty:
-        # Fallback: Just grab the 5 absolute closest ones, regardless of distance
-        local_hospitals = df_hospitals.nsmallest(5, 'distance_km')
-
-    # 3. VECTOR SECOND: Convert the local slice to LangChain Documents
-    docs = []
-    for _, row in local_hospitals.iterrows():
-        docs.append(
-            Document(
-                page_content=row['capabilities'], 
-                metadata={"name": row['name'], "distance": row['distance_km']}
-            )
-        )
+    # 3. FORMAT FOR THE LLM: Turn the Pandas rows into a clean string
+    hospitals_text = ""
+    for index, row in closest_5.iterrows():
+        hospitals_text += f"- Name: {row['name']} | Distance: {row['distance_km']:.2f} km | Stated Capabilities: {row['capabilities']}\n"
     
-    # 4. FAISS SEARCH: Spin up an instant memory DB and query it
-    temp_vector_db = FAISS.from_documents(docs, embeddings_model)
-    query_string = ", ".join(required_resources)
+    # 4. AGENTIC MATCHMAKING: Ask Gemini to figure out the best fit
+    decision = matchmaker_chain.invoke({
+        "resources": ", ".join(required_resources),
+        "hospitals_list": hospitals_text
+    })
     
-    best_match = temp_vector_db.similarity_search(query_string, k=1)[0]
+    # 5. Extract the final distance and capabilities for the chosen hospital
+    chosen_row = closest_5[closest_5['name'] == decision.hospital_name].iloc[0]
     
     return {
-        "hospital_name": best_match.metadata['name'],
-        "distance_km": round(best_match.metadata['distance'], 2),
-        "matched_capabilities": best_match.page_content
+        "hospital_name": decision.hospital_name,
+        "distance_km": round(chosen_row['distance_km'], 2),
+        "matched_capabilities": chosen_row['capabilities'],
+        "ai_reasoning": decision.reasoning
     }
-
 # ==========================================
 # 5. FASTAPI ROUTES
 # ==========================================
 app = FastAPI(title="Hospitality Triage & Dispatch API", version="1.0")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
