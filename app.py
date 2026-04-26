@@ -10,8 +10,12 @@ from langchain_huggingface import HuggingFaceEndpointEmbeddings
 # LangChain Imports
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_xai import ChatXAI
+from langchain_groq import ChatGroq
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
+from typing import TypedDict, Optional
+from langgraph.graph import StateGraph, START, END
 load_dotenv()
 # ==========================================
 # 1. INITIALIZE DATA & MODELS
@@ -48,13 +52,58 @@ except FileNotFoundError:
         "longitude": [72.5714, 72.6000, 72.5800],
         "capabilities": ["basic trauma, bcls_ambulance", "oxygen_respirators, trauma_surgeon", "burn_unit, advanced_life_support_ambulance"]
     })
+# --- INITIALIZE FIRE STATIONS ---
+try:
+    df_fire = pd.read_csv("mock_fire_stations.csv")
+    df_fire['latitude'] = pd.to_numeric(df_fire['latitude'], errors='coerce')
+    df_fire['longitude'] = pd.to_numeric(df_fire['longitude'], errors='coerce')
+    df_fire = df_fire.dropna(subset=['latitude', 'longitude'])
+except FileNotFoundError:
+    print("Warning: mock_fire_stations.csv not found. Using fallback dummy data.")
+    df_fire = pd.DataFrame({
+        "name": ["Central Fire Command", "Highway Rescue Unit", "Metro Hazmat Team"],
+        "latitude": [23.0200, 23.5100, 23.0400],
+        "longitude": [72.5700, 72.6100, 72.5900],
+        "capabilities": ["standard_engine, ladder_truck", "jaws_of_life, off_road_rescue", "hazmat_suits, chemical_foam_suppression"]
+    })
+
+# --- INITIALIZE POLICE STATIONS ---
+try:
+    df_police = pd.read_csv("mock_police.csv")
+    df_police['latitude'] = pd.to_numeric(df_police['latitude'], errors='coerce')
+    df_police['longitude'] = pd.to_numeric(df_police['longitude'], errors='coerce')
+    df_police = df_police.dropna(subset=['latitude', 'longitude'])
+except FileNotFoundError:
+    print("Warning: mock_police.csv not found. Using fallback dummy data.")
+    df_police = pd.DataFrame({
+        "name": ["Precinct 1 HQ", "Traffic Patrol Base", "SWAT / Tactical Unit"],
+        "latitude": [23.0250, 23.4900, 23.0350],
+        "longitude": [72.5750, 72.5950, 72.5850],
+        "capabilities": ["patrol_cars, holding_cells", "traffic_control, breathalyzers", "riot_gear, tactical_breach, hostage_negotiation"]
+    })
+# This replaces your standard Pydantic request passing
+class DispatchState(TypedDict):
+    # Inputs
+    latitude: float
+    longitude: float
+    user_report: str
+    
+    # AI Triage Output
+    triage_result: Optional[dict]
+    
+    # Parallel Dispatch Outputs
+    medical_dispatch: Optional[dict]
+    fire_dispatch: Optional[dict]
+    police_dispatch: Optional[dict]
 # Initialize the LLM for Triage and the Embedding model for FAISS
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0, max_retries=2)
-embeddings_model = HuggingFaceEndpointEmbeddings(
-    model="sentence-transformers/all-MiniLM-L6-v2",
-    task="feature-extraction",
-    huggingfacehub_api_token=os.environ.get("HUGGINGFACEHUB_API_TOKEN")
-)
+llm = ChatGroq(
+    model="llama-3.3-70b-versatile", 
+    temperature=0
+)# embeddings_model = HuggingFaceEndpointEmbeddings(
+#     model="sentence-transformers/all-MiniLM-L6-v2",
+#     task="feature-extraction",
+#     huggingfacehub_api_token=os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+# )
 # ==========================================
 # 2. SCHEMAS (Input & Output)
 # ==========================================
@@ -90,14 +139,19 @@ class DispatchResponse(BaseModel):
 # 3. LANGCHAIN TRIAGE SETUP
 # ==========================================
 # --- NEW: MATCHMAKER CHAIN ---
-matchmaker_llm = llm.with_structured_output(HospitalDecision)
+class ResponderDecision(BaseModel):
+    unit_name: str = Field(description="The exact name of the chosen responding unit from the provided list.")
+    reasoning: str = Field(description="A 1-sentence explanation of why this unit's vague capabilities imply they can handle the needed resources.")
 
+matchmaker_llm = llm.with_structured_output(ResponderDecision)
+
+# Notice the prompt is now generalized for ANY type of first responder
 matchmaker_prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are an expert medical logistics AI. "
-               "You are given a list of Required Resources for an emergency, and a list of the 5 closest hospitals with brief, vague capabilities. "
-               "Using your deep medical knowledge, deduce which hospital is most likely equipped to handle the resources needed. "
+    ("system", "You are an expert emergency logistics AI. "
+               "You are given a list of Required Resources for an emergency, and a list of the 5 closest responder units (Police, Fire, or Medical) with brief, vague capabilities. "
+               "Using your logical reasoning, deduce which unit is most likely equipped to handle the resources needed. "
                "Choose the closest one if multiple are equally capable."),
-    ("human", "Required Resources: {resources}\n\nNearby Hospitals:\n{hospitals_list}")
+    ("human", "Required Resources: {resources}\n\nNearby Units:\n{units_list}")
 ])
 
 matchmaker_chain = matchmaker_prompt | matchmaker_llm
@@ -138,14 +192,71 @@ def dispatch_best_hospital(user_lat, user_lon, required_resources: List[str]) ->
     # 4. AGENTIC MATCHMAKING: Ask Gemini to figure out the best fit
     decision = matchmaker_chain.invoke({
         "resources": ", ".join(required_resources),
-        "hospitals_list": hospitals_text
+        "units_list": hospitals_text # <-- FIXED THIS KEY
     })
-    
-    # 5. Extract the final distance and capabilities for the chosen hospital
-    chosen_row = closest_5[closest_5['name'] == decision.hospital_name].iloc[0]
+    chosen_row = closest_5[closest_5['name'] == decision.unit_name].iloc[0]
     
     return {
-        "hospital_name": decision.hospital_name,
+        "hospital_name": decision.unit_name, 
+        "distance_km": round(chosen_row['distance_km'], 2),
+        "matched_capabilities": chosen_row['capabilities'],
+        "ai_reasoning": decision.reasoning
+    }
+def dispatch_best_fire_station(user_lat, user_lon, required_resources: List[str]) -> dict:
+    # 1. GEO-FIRST Math
+    df_fire['distance_km'] = vectorized_haversine(
+        user_lat, user_lon, df_fire['latitude'], df_fire['longitude']
+    )
+    
+    # 2. Get 5 closest
+    closest_5 = df_fire.nsmallest(5, 'distance_km')
+    
+    # 3. Format for LLM
+    stations_text = ""
+    for index, row in closest_5.iterrows():
+        stations_text += f"- Name: {row['name']} | Distance: {row['distance_km']:.2f} km | Stated Capabilities: {row['capabilities']}\n"
+    
+    # 4. Agentic Decision
+    decision = matchmaker_chain.invoke({
+        "resources": ", ".join(required_resources),
+        "units_list": stations_text
+    })
+    
+    # 5. Extract output
+    chosen_row = closest_5[closest_5['name'] == decision.unit_name].iloc[0]
+    
+    return {
+        "unit_name": decision.unit_name,
+        "distance_km": round(chosen_row['distance_km'], 2),
+        "matched_capabilities": chosen_row['capabilities'],
+        "ai_reasoning": decision.reasoning
+    }
+
+def dispatch_best_police_station(user_lat, user_lon, required_resources: List[str]) -> dict:
+    # 1. GEO-FIRST Math
+    df_police['distance_km'] = vectorized_haversine(
+        user_lat, user_lon, df_police['latitude'], df_police['longitude']
+    )
+    
+    # 2. Get 5 closest
+    closest_5 = df_police.nsmallest(5, 'distance_km')
+    
+    # 3. Format for LLM
+    stations_text = ""
+    for index, row in closest_5.iterrows():
+        stations_text += f"- Name: {row['name']} | Distance: {row['distance_km']:.2f} km | Stated Capabilities: {row['capabilities']}\n"
+    
+    # 4. Agentic Decision
+    decision = matchmaker_chain.invoke({
+        "resources": ", ".join(required_resources),
+        "units_list": stations_text
+    })
+    
+    # 5. Extract output
+    chosen_row = closest_5[closest_5['name'] == decision.unit_name].iloc[0]
+    
+    return {
+        "unit_name": decision.unit_name,
         "distance_km": round(chosen_row['distance_km'], 2),
         "matched_capabilities": chosen_row['capabilities'],
         "ai_reasoning": decision.reasoning
@@ -161,38 +272,106 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# --- NODE 1: The Master Triage ---
+def triage_node(state: DispatchState):
+    print("Running Master Triage...")
+    result = triage_chain.invoke({
+        "lat": state["latitude"],
+        "lon": state["longitude"],
+        "user_report": state["user_report"]
+    })
+    # Updates only the triage_result key
+    return {"triage_result": result}
 
-@app.post("/api/v1/triage", response_model=DispatchResponse)
+# --- NODE 2: Medical Dispatch (Runs in Parallel) ---
+def medical_dispatch_node(state: DispatchState):
+    triage = state["triage_result"]
+    keywords = ["ambulance", "medical", "doctor", "hospital", "injury", "burn"]
+    # Optimization: Only run if medical resources are actually needed
+    if not any(kw in r.lower() for r in triage.resource_vector for kw in keywords):
+        return {"medical_dispatch": {"status": "Not Required"}}
+        
+    print("Dispatching Medical...")
+    # This is your existing Pandas + Matchmaker function!
+    match = dispatch_best_hospital(state["latitude"], state["longitude"], triage.resource_vector)
+    return {"medical_dispatch": match}
+
+# --- NODE 3: Fire Dispatch (Runs in Parallel) ---
+def fire_dispatch_node(state: DispatchState):
+    triage = state["triage_result"]
+    if triage.crisis_category != "FIRE" and "fire" not in "".join(triage.resource_vector).lower():
+         return {"fire_dispatch": {"status": "Not Required"}}
+         
+    print("Dispatching Fire...")
+    # Husain's logic pointing to df_fire_stations
+    match = dispatch_best_fire_station(state["latitude"], state["longitude"], triage.resource_vector)
+    return {"fire_dispatch": match}
+
+# --- NODE 4: Police Dispatch (Runs in Parallel) ---
+def police_dispatch_node(state: DispatchState):
+    triage = state["triage_result"]
+    if triage.crisis_category not in ["SECURITY", "MASS_CASUALTY"]:
+        return {"police_dispatch": {"status": "Not Required"}}
+        
+    print("Dispatching Police...")
+    # Husain's logic pointing to df_police_stations
+    match = dispatch_best_police_station(state["latitude"], state["longitude"], triage.resource_vector)
+    return {"police_dispatch": match}
+# Initialize the graph
+workflow = StateGraph(DispatchState)
+
+# Add all nodes to the graph
+workflow.add_node("triage", triage_node)
+workflow.add_node("medical", medical_dispatch_node)
+workflow.add_node("fire", fire_dispatch_node)
+workflow.add_node("police", police_dispatch_node)
+
+# --- THE ROUTING LOGIC ---
+# Start -> Triage
+workflow.add_edge(START, "triage")
+
+# FAN-OUT: Triage triggers all three dispatchers simultaneously
+workflow.add_edge("triage", "medical")
+workflow.add_edge("triage", "fire")
+workflow.add_edge("triage", "police")
+
+# FAN-IN: All dispatchers must finish before the graph ends
+workflow.add_edge("medical", END)
+workflow.add_edge("fire", END)
+workflow.add_edge("police", END)
+
+# Compile it into a runnable app
+dispatch_graph = workflow.compile()
+@app.post("/api/v1/triage")
 async def triage_and_dispatch(request: EmergencyRequest):
-    """
-    1. Analyzes the emergency using Gemini.
-    2. Filters hospitals within a 25km radius.
-    3. Uses FAISS to find the best-equipped hospital in that radius.
-    """
     try:
-        # STEP 1: AI Triage (Predict the needs)
-        triage_result = triage_chain.invoke({
-            "lat": request.latitude,
-            "lon": request.longitude,
-            "user_report": request.description
-        })
+        # Initialize the starting state
+        initial_state = {
+            "latitude": request.latitude,
+            "longitude": request.longitude,
+            "user_report": request.description,
+            "triage_result": None,
+            "medical_dispatch": None,
+            "fire_dispatch": None,
+            "police_dispatch": None
+        }
         
-        # STEP 2: Geo-Vector Dispatch (Find the hospital based on predicted needs)
-        hospital_match = dispatch_best_hospital(
-            user_lat=request.latitude,
-            user_lon=request.longitude,
-            required_resources=triage_result.resource_vector
-        )
+        # invoke() automatically handles the parallel threading!
+        final_state = dispatch_graph.invoke(initial_state)
         
-        # STEP 3: Return the combined payload to the frontend
+        # Clean up the output to send back to Taha's frontend
         return {
-            "triage_analysis": triage_result,
-            "dispatched_hospital": hospital_match
+            "triage_analysis": final_state["triage_result"],
+            "dispatched_units": {
+                "medical": final_state["medical_dispatch"],
+                "fire": final_state["fire_dispatch"],
+                "police": final_state["police_dispatch"]
+            }
         }
         
     except Exception as e:
         print(f"Server Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Dispatch Pipeline Failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/")
 def health_check():
