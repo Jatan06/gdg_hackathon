@@ -351,11 +351,16 @@ workflow.add_edge("fire", END)
 workflow.add_edge("police", END)
 
 # Compile it into a runnable app
-dispatch_graph = workflow.compile()
+try:
+    dispatch_graph = workflow.compile()
+except Exception as e:
+    print(f"WARNING: LangGraph compile error: {e}")
+    dispatch_graph = None
 @app.post("/api/v1/triage")
 async def triage_and_dispatch(request: EmergencyRequest):
+    if dispatch_graph is None:
+        raise HTTPException(status_code=503, detail="LangGraph workflow failed to compile. Check server logs.")
     try:
-        # Initialize the starting state
         initial_state = {
             "latitude": request.latitude,
             "longitude": request.longitude,
@@ -365,24 +370,32 @@ async def triage_and_dispatch(request: EmergencyRequest):
             "fire_dispatch": None,
             "police_dispatch": None
         }
-        
-        # invoke() automatically handles the parallel threading!
+
         final_state = dispatch_graph.invoke(initial_state)
-        
-        # Clean up the output to send back to Taha's frontend
-        return {
+
+        triage_result = final_state["triage_result"]
+        # Convert Pydantic model to plain dict so it serializes correctly
+        # when stored and re-read via /api/v1/incidents
+        triage_dict = triage_result.model_dump() if hasattr(triage_result, 'model_dump') else dict(triage_result)
+
+        response_payload = {
+            "id": f"INC-{str(uuid.uuid4())[:8].upper()}",
+            "timestamp": datetime.utcnow().isoformat() + "Z",
             "user_location": {
                 "latitude": request.latitude,
                 "longitude": request.longitude
             },
-            "triage_analysis": final_state["triage_result"],
+            "triage_analysis": triage_dict,
             "dispatched_units": {
                 "medical": final_state["medical_dispatch"],
                 "fire": final_state["fire_dispatch"],
                 "police": final_state["police_dispatch"]
             }
         }
-        
+
+        incident_history.append(response_payload)
+        return response_payload
+
     except Exception as e:
         print(f"Server Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -390,3 +403,8 @@ async def triage_and_dispatch(request: EmergencyRequest):
 @app.get("/")
 def health_check():
     return {"status": "Active", "message": "API is running. Send POST to /api/v1/triage"}
+
+@app.get("/api/v1/incidents")
+def get_incidents():
+    """Returns all processed incidents for the monitoring dashboard."""
+    return {"incidents": incident_history}
