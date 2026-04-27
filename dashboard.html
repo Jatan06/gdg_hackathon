@@ -466,7 +466,23 @@
 </main>
 
 <script>
-  const INCIDENTS_URL = 'http://127.0.0.1:8000/api/v1/incidents';
+  // ── AUTH CHECK ──
+  const stationName = localStorage.getItem('responder_station');
+  const agencyType = localStorage.getItem('responder_agency');
+
+  if (!stationName) {
+      window.location.href = 'login.html';
+  }
+
+  // Update UI with station name
+  document.addEventListener('DOMContentLoaded', () => {
+      const brand = document.querySelector('.topbar-brand span:nth-child(2)');
+      if (brand) brand.textContent = `Dispatch: ${stationName}`;
+      const cmdBadge = document.querySelector('.topbar-brand span:nth-child(3)');
+      if (cmdBadge) cmdBadge.textContent = agencyType ? agencyType.toUpperCase() : 'COMMAND';
+  });
+
+  const INCIDENTS_URL = `http://127.0.0.1:8000/api/v1/incidents/${encodeURIComponent(stationName)}`;
   const POLL_MS = 5000;
 
   let dashMap, markersGroup;
@@ -519,33 +535,13 @@
     });
   }
 
-  function pulsingIcon(color) {
-    return L.divIcon({
-      className: '',
-      html: `<div style="
-        width:14px;height:14px;border-radius:50%;
-        background:${color};border:2px solid white;
-        box-shadow:0 0 0 0 ${color};
-        animation:marker-pulse 2s infinite;">
-      </div>
-      <style>@keyframes marker-pulse{
-        0%{box-shadow:0 0 0 0 ${color}80}
-        70%{box-shadow:0 0 0 12px ${color}00}
-        100%{box-shadow:0 0 0 0 ${color}00}
-      }</style>`,
-      iconSize: [14, 14],
-      iconAnchor: [7, 7],
-      popupAnchor: [0, -10]
-    });
-  }
-
   // ── FETCH & POLL ──
   async function fetchIncidents() {
     try {
       const res = await fetch(INCIDENTS_URL);
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
-      const fresh = data.incidents || [];
+      const fresh = data || []; // It now returns a direct array
       if (fresh.length !== incidents.length) {
         incidents = fresh;
         renderFeed();
@@ -664,9 +660,17 @@
       const colorMap = { medical: '#ef4444', fire: '#f97316', police: '#3b82f6' };
       const emojiMap = { medical: '🏥', fire: '🚒', police: '🚓' };
 
+      // Agency filtering logic
+      const agencyToUnit = { 'Hospital': 'medical', 'Fire': 'fire', 'Police': 'police' };
+      const myUnitType = agencyToUnit[agencyType];
+
       ['medical', 'fire', 'police'].forEach(type => {
         const unit = u[type];
         if (!unit || unit.status === 'Not Required') return;
+        
+        // ONLY render the unit if it matches the dashboard's agency
+        if (type !== myUnitType) return;
+
         const uLat = unit.latitude, uLon = unit.longitude;
         if (!uLat || !uLon) return;
 
@@ -734,12 +738,28 @@
       </div>`;
     };
 
+    let mediaHtml = '';
+    if (inc.media_url) {
+        if (inc.media_url.endsWith('.mp4') || inc.media_url.endsWith('.mov')) {
+            mediaHtml = `<video src="${inc.media_url}" controls style="width:100%; border-radius:10px; margin-top:15px;"></video>`;
+        } else {
+            mediaHtml = `<img src="${inc.media_url}" style="width:100%; border-radius:10px; margin-top:15px; cursor:zoom-in;" onclick="window.open(this.src)">`;
+        }
+    }
+
+    const agencyToUnit = { 'Hospital': 'medical', 'Fire': 'fire', 'Police': 'police' };
+    const myUnitType = agencyToUnit[agencyType];
+
     document.getElementById('detailInner').innerHTML = `
       <div class="detail-row">
         <div class="detail-title">${inc.id} &nbsp; <span class="severity-badge severity-${t.severity_level}">${t.severity_level}</span></div>
         <button class="detail-close" onclick="closeDetail()">✕ Close</button>
       </div>
       <div class="detail-grid">
+        <div class="detail-cell" style="grid-column: span 2">
+          <div class="label">Incident Summary</div>
+          <div class="value" style="font-weight:400; font-size:0.85rem; line-height:1.4;">${t.tts_summary || '—'}</div>
+        </div>
         <div class="detail-cell">
           <div class="label">Category</div>
           <div class="value">${categoryEmoji[t.crisis_category] || ''} ${t.crisis_category || '—'}</div>
@@ -753,10 +773,9 @@
           <div class="value" style="font-size:0.7rem">${loc.venue_specifics || `${(loc.latitude||0).toFixed(4)}, ${(loc.longitude||0).toFixed(4)}`}</div>
         </div>
       </div>
-      <div class="detail-units">
-        ${buildUnitCard('medical', u.medical)}
-        ${buildUnitCard('fire', u.fire)}
-        ${buildUnitCard('police', u.police)}
+      ${mediaHtml}
+      <div class="detail-units" style="margin-top:15px;">
+        ${buildUnitCard(myUnitType, u[myUnitType])}
       </div>`;
 
     document.getElementById('detailDrawer').classList.add('open');
