@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Global Heatmap — Command Dashboard</title>
+  <meta name="description" content="City-wide heatmap of all incident records for tracking.">
+
+  <!-- Leaflet.js -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <!-- Leaflet Heat -->
+  <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
+  <!-- Shared Styles -->
+  <link rel="stylesheet" href="styles.css">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background-color: var(--bg-primary);
+    }
+
+    .heatmap-layout {
+      flex: 1;
+      position: relative;
+    }
+
+    #heatmap-map {
+      width: 100%;
+      height: 100%;
+    }
+
+    .controls-overlay {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 15px;
+      border-radius: var(--radius);
+      z-index: 1000; /* Above Leaflet map */
+      box-shadow: var(--shadow-lg);
+      backdrop-filter: blur(10px);
+    }
+    
+    .controls-overlay h3 {
+      margin: 0 0 10px 0;
+      font-size: 0.9rem;
+      color: var(--text-primary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+    }
+
+    .btn-back {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 5px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      transition: all 0.2s;
+      cursor: pointer;
+      background: transparent;
+    }
+
+    .btn-back:hover {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <div class="pulse-dot" style="background: var(--accent-orange); box-shadow: 0 0 10px var(--accent-orange);"></div>
+    <span>Crisis Dispatch</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:24px;">
+    <h1 style="font-size:1.8rem; font-weight:900; color:var(--accent-orange); margin:0; text-transform:uppercase; letter-spacing:2px; text-shadow:0 0 10px rgba(234,88,12,0.3);">GLOBAL HEATMAP</h1>
+    <div class="topbar-status">
+      <div class="dot"></div>
+      <span id="recordCount">Loading records...</span>
+    </div>
+    <button class="btn-back" onclick="window.close()">✕ Close</button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="heatmap-layout">
+  <div id="heatmap-map"></div>
+  
+  <div class="controls-overlay">
+    <h3>Intensity Legend</h3>
+    <div class="legend-item"><div class="legend-color" style="background: red;"></div> Critical / Mass Casualty</div>
+    <div class="legend-item"><div class="legend-color" style="background: orange;"></div> High</div>
+    <div class="legend-item"><div class="legend-color" style="background: yellow;"></div> Moderate</div>
+    <div class="legend-item"><div class="legend-color" style="background: lime;"></div> Low</div>
+  </div>
+</main>
+
+<script>
+  let map, heatLayer;
+  
+  // Severity weight mapping for heatmap
+  const severityWeights = {
+    'MASS_CASUALTY': 1.0,
+    'CRITICAL': 0.9,
+    'HIGH': 0.7,
+    'MODERATE': 0.4,
+    'LOW': 0.2
+  };
+
+  function initMap() {
+    map = L.map('heatmap-map', {
+      center: [23.0225, 72.5714], // Default center, will be fitted to bounds
+      zoom: 12,
+      zoomControl: false,
+      attributionControl: false
+    });
+
+    // Dark theme map tiles for better heatmap visibility
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19
+    }).addTo(map);
+
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+  }
+
+  async function fetchAndRenderHeatmap() {
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/v1/all_incidents');
+      if (!res.ok) throw new Error('Failed to fetch');
+      
+      const incidents = await res.json();
+      document.getElementById('recordCount').textContent = `Tracking ${incidents.length} historical records`;
+
+      const heatPoints = [];
+      const allLatLngs = [];
+
+      incidents.forEach(inc => {
+        const t = inc.triage_analysis || {};
+        const loc = inc.user_location || t.location || {};
+        
+        const lat = loc.latitude;
+        const lon = loc.longitude;
+        const sev = t.severity_level || 'LOW';
+        const intensity = severityWeights[sev] || 0.2;
+
+        if (lat && lon) {
+          heatPoints.push([lat, lon, intensity]);
+          allLatLngs.push([lat, lon]);
+        }
+      });
+
+      if (heatPoints.length > 0) {
+        heatLayer = L.heatLayer(heatPoints, {
+          radius: 25,
+          blur: 15,
+          maxZoom: 14,
+          gradient: {
+            0.2: 'lime',
+            0.5: 'yellow',
+            0.8: 'orange',
+            1.0: 'red'
+          }
+        }).addTo(map);
+
+        map.fitBounds(allLatLngs, { padding: [50, 50], maxZoom: 15 });
+      } else {
+        document.getElementById('recordCount').textContent = 'No records found.';
+      }
+    } catch (e) {
+      document.getElementById('recordCount').textContent = '⚠️ Error loading heatmap data';
+      console.error(e);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initMap();
+    fetchAndRenderHeatmap();
+  });
+</script>
+</body>
+</html>

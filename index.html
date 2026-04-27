@@ -12,6 +12,47 @@
 
   <!-- App Styles -->
   <link rel="stylesheet" href="styles.css">
+  <style>
+    .app-layout {
+      grid-template-columns: 380px 1fr 280px; /* Overriding to 3 columns */
+    }
+    .panel-helpline {
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border-color);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+    }
+    .helpline-card {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      box-shadow: var(--shadow-sm);
+    }
+    .helpline-card.police { border-top: 3px solid var(--accent-blue); }
+    .helpline-card.fire { border-top: 3px solid var(--accent-orange); }
+    .helpline-card.medical { border-top: 3px solid var(--accent-red); }
+    .helpline-card.disaster { border-top: 3px solid var(--accent-purple); }
+    
+    .helpline-title { font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;}
+    .helpline-number { font-size: 1.8rem; font-weight: 900; color: var(--text-primary); margin-top: 4px;}
+    .helpline-desc { font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; margin-top: 4px;}
+    
+    @media (max-width: 1200px) {
+      .app-layout {
+        grid-template-columns: 380px 1fr;
+      }
+      .panel-helpline {
+        display: none; /* Hide on smaller screens to preserve map space */
+      }
+    }
+  </style>
 </head>
 <body>
 
@@ -99,6 +140,35 @@
       </div>
     </div>
   </section>
+
+  <!-- RIGHT PANEL: Helpline Numbers -->
+  <aside class="panel-helpline">
+    <div class="section-label" style="margin-bottom: 8px;">📞 Emergency Helplines</div>
+    
+    <div class="helpline-card police">
+      <div class="helpline-title">🚓 Police</div>
+      <div class="helpline-number">100</div>
+      <div class="helpline-desc">For security threats, crimes, and immediate police assistance.</div>
+    </div>
+    
+    <div class="helpline-card fire">
+      <div class="helpline-title">🚒 Fire & Rescue</div>
+      <div class="helpline-number">101</div>
+      <div class="helpline-desc">For fire emergencies, rescues, and hazardous leaks.</div>
+    </div>
+    
+    <div class="helpline-card medical">
+      <div class="helpline-title">🚑 Ambulance</div>
+      <div class="helpline-number">102</div>
+      <div class="helpline-desc">For critical medical emergencies and trauma care.</div>
+    </div>
+    
+    <div class="helpline-card disaster">
+      <div class="helpline-title">🌪️ Disaster Management</div>
+      <div class="helpline-number">108</div>
+      <div class="helpline-desc">National Emergency Number for natural disasters and mass casualties.</div>
+    </div>
+  </aside>
 
 </main>
 

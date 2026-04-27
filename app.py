@@ -573,3 +573,27 @@ def health_check():
 def get_incidents():
     """Returns all processed incidents for the monitoring dashboard."""
     return {"incidents": incident_history}
+
+@app.get("/api/v1/all_incidents")
+async def get_all_incidents():
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM incidents ORDER BY timestamp DESC')
+        rows = cursor.fetchall()
+        conn.close()
+        
+        incidents = []
+        for row in rows:
+            inc = dict(row)
+            incidents.append({
+                "id": inc["id"],
+                "timestamp": inc["timestamp"],
+                "user_location": {"latitude": inc["latitude"], "longitude": inc["longitude"]},
+                "status": inc["status"],
+                "triage_analysis": json.loads(inc["triage_json"]) if inc["triage_json"] else {},
+            })
+        return incidents
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
