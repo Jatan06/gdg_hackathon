@@ -58,12 +58,27 @@ except FileNotFoundError:
     })
 # --- INITIALIZE FIRE STATIONS ---
 try:
-    df_fire = pd.read_csv("mock_fire_stations.csv")
+    df_fire = pd.read_csv("firestation_sample.csv")
+    
+    # Extract lon and lat from 'POINT (lon lat)'
+    df_fire['longitude'] = df_fire['geometry'].str.extract(r'POINT \(([-\d.]+)', expand=False)
+    df_fire['latitude'] = df_fire['geometry'].str.extract(r'POINT \([-\d.]+ ([-\d.]+)\)', expand=False)
+    
     df_fire['latitude'] = pd.to_numeric(df_fire['latitude'], errors='coerce')
     df_fire['longitude'] = pd.to_numeric(df_fire['longitude'], errors='coerce')
     df_fire = df_fire.dropna(subset=['latitude', 'longitude'])
+    
+    # Fill empty names
+    if 'name' in df_fire.columns:
+        df_fire['name'] = df_fire['name'].fillna("Local Fire Station")
+    else:
+        df_fire['name'] = "Local Fire Station"
+        
+    # Add dummy capabilities
+    df_fire['capabilities'] = "standard_engine, water_tender, rescue_tools"
+    
 except FileNotFoundError:
-    print("Warning: mock_fire_stations.csv not found. Using fallback dummy data.")
+    print("Warning: firestation_sample.csv not found. Using fallback dummy data.")
     df_fire = pd.DataFrame({
         "name": ["Central Fire Command", "Highway Rescue Unit", "Metro Hazmat Team"],
         "latitude": [23.0200, 23.5100, 23.0400],

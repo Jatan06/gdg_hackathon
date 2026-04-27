@@ -1,0 +1,11 @@
+geometry,amenity,name,osm_id,shape0,shape1,shape2,shape3,shape4,shape5
+POINT (74.9862534 12.5093590996289),fire_station,District Fire Office,9056899016,india,Kerala,Kasaragod,Kasaragod,Kasargod,Kasaragod (M)
+POINT (74.7400363 13.3277230997145),fire_station,Udupi Fire Station,11247473279,india,Karnataka,Udupi,Udupi,Udupi,Udupi (CMC + OG)
+POINT (74.5079663 15.8427962000063),fire_station,Belgaum Fire Station,6845945393,india,Karnataka,Belgaum,BELAGAVI,Belagavi,Belgaum (M Corp. + OG)
+POINT (92.5577844 10.5871152994708),fire_station,,2167520192,india,Andaman and Nicobar Islands,South Andaman,,,Hut Bay (RV)
+POINT (73.9703033 15.2693295999391),fire_station,Margao Fire Station,4269710993,india,Goa,South Goa,Salcete,Salcete,Margao (M Cl)
+POINT (73.93553 15.3695499999509),fire_station,Verna IDC fire Station,4283907394,india,Goa,South Goa,Mormugao,Mormugao,Nagoa
+POINT (73.82004 15.3997659999545),fire_station,,4283907393,india,Goa,South Goa,Mormugao,Mormugao,Mormugao (M Cl)
+POINT (73.79385 15.5331599999702),fire_station,Pilerne,4283890198,india,Goa,North Goa,Bardez,Bardez,Marra
+POINT (74.2624907 17.0568591001414),fire_station,Islampur agnishaman,4376875895,india,Maharashtra,Sangli,Walwa,Valva-Islampur,Uran Islampur (M Cl)
+POINT (73.8843225 18.4985647002766),fire_station,Pune Cantonment Fire Station,671451162,india,Maharashtra,Pune,Pune City,Pune City,Pune (M Corp.)
