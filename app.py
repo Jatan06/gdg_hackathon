@@ -7,6 +7,7 @@ from typing import List, Literal
 from dotenv import load_dotenv
 import uuid
 import os
+import json
 from datetime import datetime
 # LangChain Imports
 from langchain_core.prompts import ChatPromptTemplate
@@ -71,14 +72,33 @@ except FileNotFoundError:
         "capabilities": ["standard_engine, ladder_truck", "jaws_of_life, off_road_rescue", "hazmat_suits, chemical_foam_suppression"]
     })
 
-# --- INITIALIZE POLICE STATIONS ---
+# --- INITIALIZE POLICE STATIONS FROM GEOJSON ---
 try:
-    df_police = pd.read_csv("mock_police.csv")
+    with open("INDIA_POLICE_STATIONS.geojson", "r", encoding="utf-8") as f:
+        geojson_data = json.load(f)
+    
+    police_data = []
+    for feature in geojson_data.get("features", []):
+        props = feature.get("properties", {})
+        coords = feature.get("geometry", {}).get("coordinates", [0, 0])
+        
+        name = props.get("ps", "Unknown Police Station")
+        lat = props.get("latitude", coords[1] if len(coords) >= 2 else 0)
+        lon = props.get("longitude", coords[0] if len(coords) >= 2 else 0)
+        
+        police_data.append({
+            "name": name,
+            "latitude": lat,
+            "longitude": lon,
+            "capabilities": "patrol_cars, basic_response"
+        })
+        
+    df_police = pd.DataFrame(police_data)
     df_police['latitude'] = pd.to_numeric(df_police['latitude'], errors='coerce')
     df_police['longitude'] = pd.to_numeric(df_police['longitude'], errors='coerce')
     df_police = df_police.dropna(subset=['latitude', 'longitude'])
-except FileNotFoundError:
-    print("Warning: mock_police.csv not found. Using fallback dummy data.")
+except Exception as e:
+    print(f"Warning: Failed to load INDIA_POLICE_STATIONS.geojson ({e}). Using fallback dummy data.")
     df_police = pd.DataFrame({
         "name": ["Precinct 1 HQ", "Traffic Patrol Base", "SWAT / Tactical Unit"],
         "latitude": [23.0250, 23.4900, 23.0350],
