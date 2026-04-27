@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Responder Login | Emergency Dispatch</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .login-card {
+            background: rgba(20, 20, 20, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 30px;
+            background: linear-gradient(45deg, #ff3e3e, #ff8e53);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #888;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: white;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        select {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            background-size: 18px;
+            padding-right: 45px;
+            cursor: pointer;
+        }
+
+        option {
+            background-color: #1a1a1a;
+            color: white;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #ff3e3e;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: #ff3e3e;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .login-btn:hover {
+            background: #ff1a1a;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 62, 62, 0.3);
+        }
+
+        .error-msg {
+            color: #ff3e3e;
+            font-size: 0.85rem;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .hint {
+            margin-top: 20px;
+            color: #555;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="logo">COMMAND CENTER</div>
+        <p style="color: #ccc; margin-bottom: 30px;">Responder Authentication</p>
+        
+        <div class="form-group">
+            <label>Agency Type</label>
+            <select id="agencyType">
+                <option value="Police">Police Department</option>
+                <option value="Fire">Fire & Rescue</option>
+                <option value="Hospital">Medical Center</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Station/Hospital Name</label>
+            <input type="text" id="stationName" placeholder="e.g. BOMBAY DOCKYARD" autocomplete="off">
+        </div>
+
+        <button class="login-btn" id="loginBtn">ACCESS DASHBOARD</button>
+        
+        <div id="errorMsg" class="error-msg"></div>
+
+        <div class="hint">
+            Use names from the official datasets.<br>
+            e.g. Police: "BOMBAY DOCKYARD"<br>
+            Fire: "Fire Station Allahabad"<br>
+            Hospital: "Holy Family Hospital"
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const agencyType = document.getElementById('agencyType').value;
+            const stationName = document.getElementById('stationName').value.trim();
+            const errorMsg = document.getElementById('errorMsg');
+            
+            if (!stationName) {
+                errorMsg.innerText = "Please enter a station name.";
+                errorMsg.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:8000/api/v1/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agency_type: agencyType, station_name: stationName })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Save to localStorage
+                    localStorage.setItem('responder_station', data.station_name);
+                    localStorage.setItem('responder_agency', data.agency_type);
+                    // Redirect to dashboard
+                    window.location.href = 'dashboard.html';
+                } else {
+                    errorMsg.innerText = data.detail || "Login failed. Please check station name.";
+                    errorMsg.style.display = 'block';
+                }
+            } catch (err) {
+                errorMsg.innerText = "Error connecting to server.";
+                errorMsg.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

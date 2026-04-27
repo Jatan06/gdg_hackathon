@@ -9,6 +9,10 @@ import uuid
 import os
 import json
 from datetime import datetime
+import sqlite3
+import shutil
+from fastapi.staticfiles import StaticFiles
+from fastapi import UploadFile, File
 # LangChain Imports
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -20,105 +24,104 @@ from typing import TypedDict, Optional
 from langgraph.graph import StateGraph, START, END
 load_dotenv()
 # ==========================================
+# 0. DATABASE INITIALIZATION
+# ==========================================
+DB_PATH = "dispatch_v2.db"
+
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS incidents (
+            id TEXT,
+            incident_type TEXT,
+            description TEXT,
+            latitude REAL,
+            longitude REAL,
+            media_url TEXT,
+            assigned_agency TEXT,
+            assigned_station_name TEXT,
+            status TEXT,
+            timestamp TEXT,
+            triage_json TEXT,
+            dispatch_json TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+init_db()
+
+# ==========================================
 # 1. INITIALIZE DATA & MODELS
 # ==========================================
 
-# Global history for the dashboard
+# Global history for the dashboard (keeping for legacy compatibility, but using DB now)
 incident_history = []
-# Load the hospital dataset into memory exactly ONCE when the server starts.
-# Ensure you have a 'mock_hospitals.csv' in the same directory with columns: 
-# ['name', 'latitude', 'longitude', 'capabilities']
+
+# --- LOAD HOSPITALS ---
 try:
-    # 1. Load the file
-    df_hospitals = pd.read_csv("mock_datasets.csv")
+    df_hospitals = pd.read_csv("hospital_directory_cleaned.csv", low_memory=False)
+    df_hospitals = df_hospitals.rename(columns={"Hospital_Name": "name"})
+    # Ensure capabilities column exists or merge from specialties/facilities
+    if 'capabilities' not in df_hospitals.columns:
+        df_hospitals['capabilities'] = df_hospitals['Specialties'].astype(str).fillna('') + ", " + df_hospitals['Facilities'].astype(str).fillna('')
     
-    # 2. Rename the column to match our code
-    df_hospitals = df_hospitals.rename(columns={
-        "Hospital_Name": "name"
-    })
-    
-    # 3. Merge 'Specialties' and 'Facilities' into one giant 'capabilities' string for Gemini
-    # We use fillna('') just in case a hospital left one of those columns blank
-    df_hospitals['capabilities'] = df_hospitals['Specialties'].astype(str).fillna('') + ", " + df_hospitals['Facilities'].astype(str).fillna('')
-    
-    # 4. Force lat/lon to be pure numbers
-    # Note: This will catch the word "Error" in row 1 (Holy Family) and turn it into NaN
     df_hospitals['latitude'] = pd.to_numeric(df_hospitals['latitude'], errors='coerce')
     df_hospitals['longitude'] = pd.to_numeric(df_hospitals['longitude'], errors='coerce')
-    
-    # 5. Drop any rows with broken GPS coordinates
     df_hospitals = df_hospitals.dropna(subset=['latitude', 'longitude'])
-
-except FileNotFoundError:
-    print("CRITICAL WARNING: mock_hospitals.csv not found in the directory! Using fallback dummy data.")
+except Exception as e:
+    print(f"Warning: hospital_directory_cleaned.csv load failed ({e}). Using fallback.")
     df_hospitals = pd.DataFrame({
-        "name": ["City General", "Apollo Highway Care", "Metro Burn Center"],
-        "latitude": [23.0225, 23.5000, 23.0300],
-        "longitude": [72.5714, 72.6000, 72.5800],
-        "capabilities": ["basic trauma, bcls_ambulance", "oxygen_respirators, trauma_surgeon", "burn_unit, advanced_life_support_ambulance"]
+        "name": ["City General", "Apollo Highway Care"],
+        "latitude": [23.0225, 23.5000],
+        "longitude": [72.5714, 72.6000],
+        "capabilities": ["basic trauma", "trauma_surgeon"]
     })
-# --- INITIALIZE FIRE STATIONS ---
+
+# --- LOAD FIRE STATIONS ---
 try:
-    df_fire = pd.read_csv("firestation_sample.csv")
+    df_fire = pd.read_csv("OpenStreetMap_-_Fire_Station.csv")
+    # OSM CSV has latitude and longitude swapped or just needs naming? 
+    # Let's check the first line again: latitude,longitude,osm_id,name...
+    # But wait, looking at the data: 78.53, 21.59 ... 78 is longitude for India. 
+    # So the CSV header might be 'latitude,longitude' but the values are 'lon,lat'.
+    # I will swap them if they look like lon,lat.
+    if df_fire['latitude'].mean() > 60: # Likely longitude
+        df_fire = df_fire.rename(columns={'latitude': 'temp_lat', 'longitude': 'temp_lon'})
+        df_fire = df_fire.rename(columns={'temp_lat': 'longitude', 'temp_lon': 'latitude'})
     
-    # Extract lon and lat from 'POINT (lon lat)'
-    df_fire['longitude'] = df_fire['geometry'].str.extract(r'POINT \(([-\d.]+)', expand=False)
-    df_fire['latitude'] = df_fire['geometry'].str.extract(r'POINT \([-\d.]+ ([-\d.]+)\)', expand=False)
+    # Fill empty names
+    df_fire['name'] = df_fire['name'].replace(r'^\s*$', np.nan, regex=True)
+    df_fire['name'] = df_fire['name'].fillna("Fire Station " + df_fire['district'].astype(str))
     
     df_fire['latitude'] = pd.to_numeric(df_fire['latitude'], errors='coerce')
     df_fire['longitude'] = pd.to_numeric(df_fire['longitude'], errors='coerce')
     df_fire = df_fire.dropna(subset=['latitude', 'longitude'])
-    
-    # Fill empty names
-    if 'name' in df_fire.columns:
-        df_fire['name'] = df_fire['name'].fillna("Local Fire Station")
-    else:
-        df_fire['name'] = "Local Fire Station"
-        
-    # Add dummy capabilities
-    df_fire['capabilities'] = "standard_engine, water_tender, rescue_tools"
-    
-except FileNotFoundError:
-    print("Warning: firestation_sample.csv not found. Using fallback dummy data.")
+    df_fire['capabilities'] = "fire_suppression, rescue_operations, basic_medical"
+except Exception as e:
+    print(f"Warning: OpenStreetMap_-_Fire_Station.csv load failed ({e}). Using fallback.")
     df_fire = pd.DataFrame({
-        "name": ["Central Fire Command", "Highway Rescue Unit", "Metro Hazmat Team"],
-        "latitude": [23.0200, 23.5100, 23.0400],
-        "longitude": [72.5700, 72.6100, 72.5900],
-        "capabilities": ["standard_engine, ladder_truck", "jaws_of_life, off_road_rescue", "hazmat_suits, chemical_foam_suppression"]
+        "name": ["Central Fire Command"],
+        "latitude": [23.0200],
+        "longitude": [72.5700],
+        "capabilities": ["standard_engine"]
     })
 
-# --- INITIALIZE POLICE STATIONS FROM GEOJSON ---
+# --- LOAD POLICE STATIONS ---
 try:
-    with open("INDIA_POLICE_STATIONS.geojson", "r", encoding="utf-8") as f:
-        geojson_data = json.load(f)
-    
-    police_data = []
-    for feature in geojson_data.get("features", []):
-        props = feature.get("properties", {})
-        coords = feature.get("geometry", {}).get("coordinates", [0, 0])
-        
-        name = props.get("ps", "Unknown Police Station")
-        lat = props.get("latitude", coords[1] if len(coords) >= 2 else 0)
-        lon = props.get("longitude", coords[0] if len(coords) >= 2 else 0)
-        
-        police_data.append({
-            "name": name,
-            "latitude": lat,
-            "longitude": lon,
-            "capabilities": "patrol_cars, basic_response"
-        })
-        
-    df_police = pd.DataFrame(police_data)
+    df_police = pd.read_csv("INDIA_POLICE_STATIONS.csv")
     df_police['latitude'] = pd.to_numeric(df_police['latitude'], errors='coerce')
     df_police['longitude'] = pd.to_numeric(df_police['longitude'], errors='coerce')
     df_police = df_police.dropna(subset=['latitude', 'longitude'])
+    df_police['capabilities'] = "patrol_cars, basic_response"
 except Exception as e:
-    print(f"Warning: Failed to load INDIA_POLICE_STATIONS.geojson ({e}). Using fallback dummy data.")
+    print(f"Warning: INDIA_POLICE_STATIONS.csv load failed ({e}). Using fallback.")
     df_police = pd.DataFrame({
-        "name": ["Precinct 1 HQ", "Traffic Patrol Base", "SWAT / Tactical Unit"],
-        "latitude": [23.0250, 23.4900, 23.0350],
-        "longitude": [72.5750, 72.5950, 72.5850],
-        "capabilities": ["patrol_cars, holding_cells", "traffic_control, breathalyzers", "riot_gear, tactical_breach, hostage_negotiation"]
+        "name": ["Precinct 1 HQ"],
+        "latitude": [23.0250],
+        "longitude": [72.5750],
+        "capabilities": ["patrol_cars"]
     })
 # This replaces your standard Pydantic request passing
 class DispatchState(TypedDict):
@@ -150,6 +153,7 @@ class EmergencyRequest(BaseModel):
     latitude: float = Field(..., description="GPS Latitude from the frontend device")
     longitude: float = Field(..., description="GPS Longitude from the frontend device")
     description: str = Field(..., description="The user's frantic text or transcribed voice report")
+    media_url: Optional[str] = None
 class LocationMetadata(BaseModel):
     latitude: float = Field(description="The GPS latitude.")
     longitude: float = Field(description="The GPS longitude.")
@@ -164,6 +168,10 @@ class EmergencyPayload(BaseModel):
 class HospitalDecision(BaseModel):
     hospital_name: str = Field(description="The exact name of the chosen hospital from the provided list.")
     reasoning: str = Field(description="A 1-sentence explanation of why this hospital's vague capabilities imply they can handle the needed resources.")
+
+class LoginRequest(BaseModel):
+    agency_type: Literal["Police", "Fire", "Hospital"]
+    station_name: str
 
 class HospitalMatch(BaseModel):
     hospital_name: str
@@ -315,7 +323,14 @@ def dispatch_best_police_station(user_lat, user_lon, required_resources: List[st
 # ==========================================
 # 5. FASTAPI ROUTES
 # ==========================================
+
+# Create uploads directory if not exists
+UPLOAD_DIR = "uploads"
+if not os.path.exists(UPLOAD_DIR):
+    os.makedirs(UPLOAD_DIR)
+
 app = FastAPI(title="Hospitality Triage & Dispatch API", version="1.0")
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
@@ -435,12 +450,121 @@ async def triage_and_dispatch(request: EmergencyRequest):
         }
 
         incident_history.append(response_payload)
-        return response_payload
+        
+        # --- SAVE TO DATABASE ---
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            
+            # We save the incident for each agency dispatched
+            dispatched = response_payload["dispatched_units"]
+            agencies = [
+                ("Medical", dispatched["medical"]),
+                ("Fire", dispatched["fire"]),
+                ("Police", dispatched["police"])
+            ]
+            
+            for agency_type, unit in agencies:
+                if unit and unit.get("status") != "Not Required":
+                    station_name = unit.get("unit_name") or unit.get("hospital_name") or unit.get("name") or "Unknown"
+                    print(f"Saving incident {response_payload['id']} for {agency_type} at {station_name}")
+                    cursor.execute('''
+                        INSERT INTO incidents (id, incident_type, description, latitude, longitude, media_url, assigned_agency, assigned_station_name, status, timestamp, triage_json, dispatch_json)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (
+                        response_payload["id"],
+                        response_payload["triage_analysis"]["crisis_category"],
+                        request.description,
+                        request.latitude,
+                        request.longitude,
+                        getattr(request, 'media_url', None),
+                        agency_type,
+                        station_name,
+                        "ACTIVE",
+                        response_payload["timestamp"],
+                        json.dumps(response_payload["triage_analysis"]),
+                        json.dumps(response_payload["dispatched_units"])
+                    ))
+            
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"Error saving to DB: {e}")
 
+        return response_payload
     except Exception as e:
         print(f"Server Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/v1/login")
+async def login(request: LoginRequest):
+    input_name = request.station_name.strip().upper()
+    actual_name = None
+    
+    if request.agency_type == "Police":
+        if not df_police.empty:
+            matches = df_police[df_police['name'].str.upper() == input_name]
+            if not matches.empty:
+                actual_name = matches.iloc[0]['name']
+    elif request.agency_type == "Fire":
+        if not df_fire.empty:
+            matches = df_fire[df_fire['name'].str.upper() == input_name]
+            if not matches.empty:
+                actual_name = matches.iloc[0]['name']
+    elif request.agency_type == "Hospital":
+        if not df_hospitals.empty:
+            matches = df_hospitals[df_hospitals['name'].str.upper() == input_name]
+            if not matches.empty:
+                actual_name = matches.iloc[0]['name']
+            
+    if not actual_name:
+        raise HTTPException(status_code=401, detail=f"Station '{request.station_name}' not found in our {request.agency_type} registry.")
+    
+    return {"status": "success", "station_name": actual_name, "agency_type": request.agency_type}
+
+@app.get("/api/v1/incidents/{station_name}")
+async def get_station_incidents(station_name: str):
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM incidents WHERE UPPER(assigned_station_name) = UPPER(?) ORDER BY timestamp DESC', (station_name,))
+        rows = cursor.fetchall()
+        conn.close()
+        
+        incidents = []
+        for row in rows:
+            inc = dict(row)
+            # Reconstruct the expected frontend format
+            incidents.append({
+                "id": inc["id"],
+                "timestamp": inc["timestamp"],
+                "user_location": {"latitude": inc["latitude"], "longitude": inc["longitude"]},
+                "media_url": inc["media_url"],
+                "assigned_agency": inc["assigned_agency"],
+                "assigned_station_name": inc["assigned_station_name"],
+                "status": inc["status"],
+                "triage_analysis": json.loads(inc["triage_json"]) if inc["triage_json"] else {},
+                "dispatched_units": json.loads(inc["dispatch_json"]) if inc["dispatch_json"] else {}
+            })
+        return incidents
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/v1/upload")
+async def upload_media(file: UploadFile = File(...)):
+    try:
+        ext = os.path.splitext(file.filename)[1]
+        file_id = str(uuid.uuid4())[:8]
+        filename = f"{file_id}{ext}"
+        filepath = os.path.join(UPLOAD_DIR, filename)
+        
+        with open(filepath, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        return {"media_url": f"http://127.0.0.1:8000/uploads/{filename}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 @app.get("/")
 def health_check():
     return {"status": "Active", "message": "API is running. Send POST to /api/v1/triage"}
