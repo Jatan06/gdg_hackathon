@@ -211,12 +211,34 @@ async function sendDispatch() {
       <p>AI is analyzing the crisis and computing optimal dispatch vectors...</p>
     </div>`;
 
-  const payload = { latitude: lat, longitude: lon, description: description };
-  if (currentFileBase64) {
-    payload.file_data = currentFileBase64;
-    payload.file_type = currentFileMimeType;
+  let mediaUrl = null;
+
+  // 1. If there's a file, upload it first
+  const fileInput = document.getElementById("fileUpload");
+  if (fileInput.files.length > 0) {
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+    
+    try {
+      const uploadRes = await fetch("http://127.0.0.1:8000/api/v1/upload", {
+        method: "POST",
+        body: formData
+      });
+      if (uploadRes.ok) {
+        const uploadData = await uploadRes.json();
+        mediaUrl = uploadData.media_url;
+      }
+    } catch (err) {
+      console.error("Upload failed:", err);
+    }
   }
 
+  const payload = { 
+    latitude: lat, 
+    longitude: lon, 
+    description: description,
+    media_url: mediaUrl 
+  };
   try {
     const response = await fetch(API_URL, {
       method: "POST",
