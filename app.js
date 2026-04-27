@@ -2,29 +2,41 @@
 // Emergency Dispatch — Main Application Logic
 // =============================================
 
-const API_URL = 'http://127.0.0.1:8000/api/v1/triage';
-let map, userMarker, markersGroup, routeLines = [];
+const API_URL = "http://127.0.0.1:8000/api/v1/triage";
+let map,
+  userMarker,
+  markersGroup,
+  routeLines = [];
 let etaIntervals = [];
 let recognition = null;
+
+let currentFileBase64 = null;
+let currentFileMimeType = null;
 
 // =============================================
 // 1. MAP INITIALIZATION
 // =============================================
 function initMap() {
-  map = L.map('map', {
+  map = L.map("map", {
     center: [19.076, 72.8777],
     zoom: 12,
     zoomControl: false,
-    attributionControl: false
+    attributionControl: false,
   });
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-    maxZoom: 19
-  }).addTo(map);
+  L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    {
+      maxZoom: 19,
+    },
+  ).addTo(map);
 
-  L.control.zoom({ position: 'topright' }).addTo(map);
-  L.control.attribution({ position: 'bottomright', prefix: false })
-    .addAttribution('&copy; <a href="https://www.openstreetmap.org/">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>')
+  L.control.zoom({ position: "topright" }).addTo(map);
+  L.control
+    .attribution({ position: "bottomright", prefix: false })
+    .addAttribution(
+      '&copy; <a href="https://www.openstreetmap.org/">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+    )
     .addTo(map);
 
   markersGroup = L.layerGroup().addTo(map);
@@ -32,7 +44,7 @@ function initMap() {
 
 function createPulsingIcon(color) {
   return L.divIcon({
-    className: 'custom-marker',
+    className: "custom-marker",
     html: `<div style="
       width: 18px; height: 18px; border-radius: 50%;
       background: ${color};
@@ -49,13 +61,13 @@ function createPulsingIcon(color) {
     </style>`,
     iconSize: [18, 18],
     iconAnchor: [9, 9],
-    popupAnchor: [0, -12]
+    popupAnchor: [0, -12],
   });
 }
 
 function createLabelIcon(emoji, color) {
   return L.divIcon({
-    className: 'custom-marker',
+    className: "custom-marker",
     html: `<div style="
       width: 36px; height: 36px; border-radius: 8px;
       background: ${color}; display: flex;
@@ -65,15 +77,15 @@ function createLabelIcon(emoji, color) {
     ">${emoji}</div>`,
     iconSize: [36, 36],
     iconAnchor: [18, 18],
-    popupAnchor: [0, -22]
+    popupAnchor: [0, -22],
   });
 }
 
 function setUserMarker(lat, lng) {
   if (userMarker) map.removeLayer(userMarker);
-  userMarker = L.marker([lat, lng], { icon: createPulsingIcon('#3b82f6') })
+  userMarker = L.marker([lat, lng], { icon: createPulsingIcon("#3b82f6") })
     .addTo(map)
-    .bindPopup('<strong>📍 Your Location</strong>')
+    .bindPopup("<strong>📍 Your Location</strong>")
     .openPopup();
   map.setView([lat, lng], 13);
 }
@@ -82,16 +94,16 @@ function setUserMarker(lat, lng) {
 // 2. GEOLOCATION
 // =============================================
 function detectLocation() {
-  const statusEl = document.getElementById('gpsStatus');
-  const latInput = document.getElementById('lat');
-  const lonInput = document.getElementById('lon');
+  const statusEl = document.getElementById("gpsStatus");
+  const latInput = document.getElementById("lat");
+  const lonInput = document.getElementById("lon");
 
-  statusEl.textContent = '⏳ Detecting...';
-  statusEl.className = 'gps-status detecting';
+  statusEl.textContent = "⏳ Detecting...";
+  statusEl.className = "gps-status detecting";
 
   if (!navigator.geolocation) {
-    statusEl.textContent = '❌ Not Supported';
-    statusEl.className = 'gps-status denied';
+    statusEl.textContent = "❌ Not Supported";
+    statusEl.className = "gps-status denied";
     return;
   }
 
@@ -99,17 +111,17 @@ function detectLocation() {
     (pos) => {
       latInput.value = pos.coords.latitude.toFixed(7);
       lonInput.value = pos.coords.longitude.toFixed(7);
-      statusEl.textContent = '🟢 GPS Locked';
-      statusEl.className = 'gps-status locked';
+      statusEl.textContent = "🟢 GPS Locked";
+      statusEl.className = "gps-status locked";
       setUserMarker(pos.coords.latitude, pos.coords.longitude);
     },
     (err) => {
-      console.warn('Geolocation error:', err.message);
-      statusEl.textContent = '⚠️ Using Default';
-      statusEl.className = 'gps-status denied';
+      console.warn("Geolocation error:", err.message);
+      statusEl.textContent = "⚠️ Using Default";
+      statusEl.className = "gps-status denied";
       setUserMarker(parseFloat(latInput.value), parseFloat(lonInput.value));
     },
-    { enableHighAccuracy: true, timeout: 10000 }
+    { enableHighAccuracy: true, timeout: 10000 },
   );
 }
 
@@ -117,17 +129,18 @@ function detectLocation() {
 // 3. SPEECH-TO-TEXT
 // =============================================
 function initSpeechRecognition() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) return;
 
   recognition = new SpeechRecognition();
   recognition.continuous = true;
   recognition.interimResults = true;
-  recognition.lang = 'en-US';
+  recognition.lang = "en-US";
 
   recognition.onresult = (event) => {
-    const textarea = document.getElementById('description');
-    let transcript = '';
+    const textarea = document.getElementById("description");
+    let transcript = "";
     for (let i = 0; i < event.results.length; i++) {
       transcript += event.results[i][0].transcript;
     }
@@ -135,7 +148,7 @@ function initSpeechRecognition() {
   };
 
   recognition.onerror = (event) => {
-    console.error('Speech recognition error:', event.error);
+    console.error("Speech recognition error:", event.error);
     stopRecording();
   };
 
@@ -145,8 +158,8 @@ function initSpeechRecognition() {
 }
 
 function toggleMic() {
-  const micBtn = document.getElementById('micBtn');
-  if (micBtn.classList.contains('recording')) {
+  const micBtn = document.getElementById("micBtn");
+  if (micBtn.classList.contains("recording")) {
     stopRecording();
   } else {
     startRecording();
@@ -155,76 +168,87 @@ function toggleMic() {
 
 function startRecording() {
   if (!recognition) {
-    alert('Speech recognition is not supported in this browser. Try Chrome.');
+    alert("Speech recognition is not supported in this browser. Try Chrome.");
     return;
   }
-  const micBtn = document.getElementById('micBtn');
-  micBtn.classList.add('recording');
-  micBtn.innerHTML = '⏹️';
+  const micBtn = document.getElementById("micBtn");
+  micBtn.classList.add("recording");
+  micBtn.innerHTML = "⏹️";
   recognition.start();
 }
 
 function stopRecording() {
   if (!recognition) return;
-  const micBtn = document.getElementById('micBtn');
-  micBtn.classList.remove('recording');
-  micBtn.innerHTML = '🎙️';
-  try { recognition.stop(); } catch(e) {}
+  const micBtn = document.getElementById("micBtn");
+  micBtn.classList.remove("recording");
+  micBtn.innerHTML = "🎙️";
+  try {
+    recognition.stop();
+  } catch (e) {}
 }
 
 // =============================================
 // 4. DISPATCH REQUEST
 // =============================================
 async function sendDispatch() {
-  const btn = document.getElementById('dispatchBtn');
-  const description = document.getElementById('description').value.trim();
+  const btn = document.getElementById("dispatchBtn");
+  const description = document.getElementById("description").value.trim();
 
   if (!description) {
-    shakeElement(document.getElementById('description'));
+    shakeElement(document.getElementById("description"));
     return;
   }
 
-  const lat = parseFloat(document.getElementById('lat').value);
-  const lon = parseFloat(document.getElementById('lon').value);
+  const lat = parseFloat(document.getElementById("lat").value);
+  const lon = parseFloat(document.getElementById("lon").value);
 
   // UI: Loading state
-  btn.classList.add('loading');
+  btn.classList.add("loading");
   btn.disabled = true;
-  document.getElementById('resultsArea').innerHTML = `
+  document.getElementById("resultsArea").innerHTML = `
     <div class="results-placeholder">
       <div class="spinner" style="width:40px;height:40px;border-width:3px;"></div>
       <p>AI is analyzing the crisis and computing optimal dispatch vectors...</p>
     </div>`;
 
+  const payload = { latitude: lat, longitude: lon, description: description };
+  if (currentFileBase64) {
+    payload.file_data = currentFileBase64;
+    payload.file_type = currentFileMimeType;
+  }
+
   try {
     const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ latitude: lat, longitude: lon, description })
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) throw new Error(`Server Error: ${response.status}`);
     const data = await response.json();
     renderResults(data, lat, lon);
   } catch (error) {
-    document.getElementById('resultsArea').innerHTML = `
+    document.getElementById("resultsArea").innerHTML = `
       <div class="results-placeholder" style="color: var(--accent-red);">
         <div class="icon">⚠️</div>
         <p><strong>Connection Failed</strong><br>${error.message}<br><br>
         Make sure FastAPI is running on<br><code>http://127.0.0.1:8000</code></p>
       </div>`;
   } finally {
-    btn.classList.remove('loading');
+    btn.classList.remove("loading");
     btn.disabled = false;
   }
 }
 
 function shakeElement(el) {
-  el.style.animation = 'none';
+  el.style.animation = "none";
   el.offsetHeight; // trigger reflow
-  el.style.animation = 'shake 0.4s ease';
-  el.style.borderColor = 'var(--accent-red)';
-  setTimeout(() => { el.style.borderColor = ''; el.style.animation = ''; }, 600);
+  el.style.animation = "shake 0.4s ease";
+  el.style.borderColor = "var(--accent-red)";
+  setTimeout(() => {
+    el.style.borderColor = "";
+    el.style.animation = "";
+  }, 600);
 }
 
 // =============================================
@@ -235,7 +259,7 @@ function renderResults(data, userLat, userLon) {
   etaIntervals.forEach(clearInterval);
   etaIntervals = [];
   markersGroup.clearLayers();
-  routeLines.forEach(l => map.removeLayer(l));
+  routeLines.forEach((l) => map.removeLayer(l));
   routeLines = [];
 
   setUserMarker(userLat, userLon);
@@ -243,26 +267,47 @@ function renderResults(data, userLat, userLon) {
   const triage = data.triage_analysis;
   const units = data.dispatched_units;
 
-  let html = '';
+  let html = "";
 
   // --- Triage Card ---
   html += buildTriageCard(triage);
 
   // --- Dispatch Cards ---
   html += '<div class="dispatch-cards">';
-  html += buildDispatchCard(units.medical, 'medical', '🏥', 'Medical Response', userLat, userLon);
-  html += buildDispatchCard(units.fire, 'fire', '🚒', 'Fire Response', userLat, userLon);
-  html += buildDispatchCard(units.police, 'police', '🚓', 'Police Response', userLat, userLon);
-  html += '</div>';
+  html += buildDispatchCard(
+    units.medical,
+    "medical",
+    "🏥",
+    "Medical Response",
+    userLat,
+    userLon,
+  );
+  html += buildDispatchCard(
+    units.fire,
+    "fire",
+    "🚒",
+    "Fire Response",
+    userLat,
+    userLon,
+  );
+  html += buildDispatchCard(
+    units.police,
+    "police",
+    "🚓",
+    "Police Response",
+    userLat,
+    userLon,
+  );
+  html += "</div>";
 
-  document.getElementById('resultsArea').innerHTML = html;
+  document.getElementById("resultsArea").innerHTML = html;
 
   // Start ETA countdowns
   startAllCountdowns();
 
   // Fit map to all markers
   const bounds = L.latLngBounds([[userLat, userLon]]);
-  markersGroup.eachLayer(m => bounds.extend(m.getLatLng()));
+  markersGroup.eachLayer((m) => bounds.extend(m.getLatLng()));
   if (userMarker) bounds.extend(userMarker.getLatLng());
   map.fitBounds(bounds, { padding: [50, 50] });
 }
@@ -285,7 +330,7 @@ function buildTriageCard(triage) {
         </div>
         <div class="triage-stat" style="grid-column: 1 / -1;">
           <div class="label">Resources Needed</div>
-          <div class="value" style="font-size:0.78rem; font-weight:500; color:var(--text-secondary);">${triage.resource_vector.join(', ')}</div>
+          <div class="value" style="font-size:0.78rem; font-weight:500; color:var(--text-secondary);">${triage.resource_vector.join(", ")}</div>
         </div>
         <div class="triage-summary">
           <div class="label">TTS Summary</div>
@@ -296,11 +341,11 @@ function buildTriageCard(triage) {
 }
 
 function buildDispatchCard(unit, type, emoji, label, userLat, userLon) {
-  const isNotRequired = unit && unit.status === 'Not Required';
-  const cardClass = `dispatch-card ${type} ${isNotRequired ? 'not-required' : ''}`;
+  const isNotRequired = unit && unit.status === "Not Required";
+  const cardClass = `dispatch-card ${type} ${isNotRequired ? "not-required" : ""}`;
   const iconClass = `unit-icon ${type}-icon`;
 
-  const colorMap = { medical: '#ef4444', fire: '#f97316', police: '#3b82f6' };
+  const colorMap = { medical: "#ef4444", fire: "#f97316", police: "#3b82f6" };
 
   if (isNotRequired) {
     return `
@@ -315,15 +360,15 @@ function buildDispatchCard(unit, type, emoji, label, userLat, userLon) {
       </div>`;
   }
 
-  if (!unit) return '';
+  if (!unit) return "";
 
-  const unitName = unit.hospital_name || unit.unit_name || 'Unknown';
+  const unitName = unit.hospital_name || unit.unit_name || "Unknown";
   const eta = unit.estimated_eta_minutes || 0;
   const etaId = `eta-${type}`;
 
   // Add marker to map
   const marker = L.marker([unit.latitude, unit.longitude], {
-    icon: createLabelIcon(emoji, colorMap[type])
+    icon: createLabelIcon(emoji, colorMap[type]),
   }).bindPopup(`<strong>${unitName}</strong><br>
     📏 ${unit.distance_km} km away<br>
     ⏱️ ETA: ~${eta} min<br>
@@ -332,13 +377,16 @@ function buildDispatchCard(unit, type, emoji, label, userLat, userLon) {
 
   // Draw route line
   const line = L.polyline(
-    [[userLat, userLon], [unit.latitude, unit.longitude]],
-    { color: colorMap[type], weight: 2, opacity: 0.6, dashArray: '8, 8' }
+    [
+      [userLat, userLon],
+      [unit.latitude, unit.longitude],
+    ],
+    { color: colorMap[type], weight: 2, opacity: 0.6, dashArray: "8, 8" },
   ).addTo(map);
   routeLines.push(line);
 
   return `
-    <div class="${cardClass}" style="animation-delay: ${type === 'fire' ? '0.1s' : type === 'police' ? '0.2s' : '0s'}">
+    <div class="${cardClass}" style="animation-delay: ${type === "fire" ? "0.1s" : type === "police" ? "0.2s" : "0s"}">
       <div class="card-header">
         <div class="unit-info">
           <div class="${iconClass}">${emoji}</div>
@@ -374,14 +422,14 @@ function buildDispatchCard(unit, type, emoji, label, userLat, userLon) {
 // 6. ETA COUNTDOWN TIMERS
 // =============================================
 function formatEta(totalSeconds) {
-  if (totalSeconds <= 0) return '0:00';
+  if (totalSeconds <= 0) return "0:00";
   const m = Math.floor(totalSeconds / 60);
   const s = Math.floor(totalSeconds % 60);
-  return `${m}:${s.toString().padStart(2, '0')}`;
+  return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
 function startAllCountdowns() {
-  ['medical', 'fire', 'police'].forEach(type => {
+  ["medical", "fire", "police"].forEach((type) => {
     const el = document.getElementById(`eta-${type}`);
     if (!el) return;
     let seconds = parseInt(el.dataset.seconds) || 0;
@@ -390,8 +438,8 @@ function startAllCountdowns() {
     const interval = setInterval(() => {
       seconds--;
       if (seconds <= 0) {
-        el.textContent = 'ARRIVED';
-        el.style.color = 'var(--accent-green)';
+        el.textContent = "ARRIVED";
+        el.style.color = "var(--accent-green)";
         clearInterval(interval);
       } else {
         el.textContent = formatEta(seconds);
@@ -402,10 +450,48 @@ function startAllCountdowns() {
 }
 
 // =============================================
-// 7. INITIALIZATION
+// 7. FILE HANDLING
 // =============================================
-document.addEventListener('DOMContentLoaded', () => {
+function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const dataUrl = e.target.result;
+    currentFileMimeType = dataUrl.split(";")[0].split(":")[1];
+    currentFileBase64 = dataUrl.split(",")[1];
+
+    document.getElementById("fileName").textContent = file.name;
+    document.getElementById("filePreview").style.display = "flex";
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeFile() {
+  document.getElementById("fileUpload").value = "";
+  currentFileBase64 = null;
+  currentFileMimeType = null;
+  document.getElementById("filePreview").style.display = "none";
+}
+
+// =============================================
+// 8. INITIALIZATION
+// =============================================
+async function requestMicPermission() {
+  try {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+    }
+  } catch (err) {
+    console.warn("Microphone permission denied:", err);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
   initMap();
   detectLocation();
   initSpeechRecognition();
+  requestMicPermission();
 });
