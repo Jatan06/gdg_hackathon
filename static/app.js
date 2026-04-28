@@ -32,12 +32,6 @@ function initMap() {
   ).addTo(map);
 
   L.control.zoom({ position: "topright" }).addTo(map);
-  L.control
-    .attribution({ position: "bottomright", prefix: false })
-    .addAttribution(
-      '&copy; <a href="https://www.openstreetmap.org/">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
-    )
-    .addTo(map);
 
   markersGroup = L.layerGroup().addTo(map);
 }

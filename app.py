@@ -336,13 +336,21 @@ def dispatch_best_police_station(user_lat, user_lon, required_resources: List[st
 # 5. FASTAPI ROUTES
 # ==========================================
 
-# Create uploads directory if not exists
-UPLOAD_DIR = "uploads"
+# Create uploads directory in /tmp (Vercel allows writing here)
+UPLOAD_DIR = "/tmp/uploads"
 if not os.path.exists(UPLOAD_DIR):
-    os.makedirs(UPLOAD_DIR)
+    try:
+        os.makedirs(UPLOAD_DIR)
+    except Exception as e:
+        print(f"Warning: Could not create upload dir: {e}")
 
 app = FastAPI(title="Hospitality Triage & Dispatch API", version="1.0")
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+# Note: StaticFiles from /tmp might not work perfectly on all serverless runtimes
+# but this prevents the 500 error on upload.
+try:
+    app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+except:
+    pass
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.add_middleware(
     CORSMiddleware,
