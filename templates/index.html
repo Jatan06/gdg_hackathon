@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crisis Dispatch — Emergency Response Coordination</title>
+  <meta name="description" content="AI-powered emergency dispatch system with real-time triage, geospatial coordination, and multi-unit response mapping.">
+
+  <!-- Leaflet.js (Map) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- App Styles -->
+  <link rel="stylesheet" href="/static/styles.css">
+  <style>
+    .app-layout {
+      grid-template-columns: 380px 1fr 280px; /* Overriding to 3 columns */
+    }
+    .panel-helpline {
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border-color);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+    }
+    .helpline-card {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      box-shadow: var(--shadow-sm);
+    }
+    .helpline-card.police { border-top: 3px solid var(--accent-blue); }
+    .helpline-card.fire { border-top: 3px solid var(--accent-orange); }
+    .helpline-card.medical { border-top: 3px solid var(--accent-red); }
+    .helpline-card.disaster { border-top: 3px solid var(--accent-purple); }
+    
+    .helpline-title { font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;}
+    .helpline-number { font-size: 1.8rem; font-weight: 900; color: var(--text-primary); margin-top: 4px;}
+    .helpline-desc { font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; margin-top: 4px;}
+    
+    @media (max-width: 1200px) {
+      .app-layout {
+        grid-template-columns: 380px 1fr;
+      }
+      .panel-helpline {
+        display: none; /* Hide on smaller screens to preserve map space */
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+
+<!-- ===== TOP BAR ===== -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <div class="pulse-dot"></div>
+    <span>Crisis Dispatch</span>
+  </div>
+  <div class="topbar-status">
+    <div class="dot"></div>
+    <span>System Online — AI Ready</span>
+  </div>
+</header>
+
+<!-- ===== MAIN LAYOUT ===== -->
+<main class="app-layout">
+
+  <!-- LEFT PANEL: Report Input -->
+  <aside class="panel-left">
+
+    <!-- GPS Location -->
+    <div>
+      <div class="section-label">📍 Location</div>
+      <div class="gps-card">
+        <div class="gps-header">
+          <span>🛰️ GPS Coordinates</span>
+          <span class="gps-status detecting" id="gpsStatus">⏳ Detecting...</span>
+        </div>
+        <div class="gps-coords">
+          <input type="text" id="lat" value="18.9681978" placeholder="Latitude" title="Latitude">
+          <input type="text" id="lon" value="72.8072647" placeholder="Longitude" title="Longitude">
+        </div>
+      </div>
+    </div>
+
+    <!-- Emergency Report -->
+    <div>
+      <div class="section-label">📝 Incident Report</div>
+      <div class="report-area">
+        <textarea
+          id="description"
+          placeholder="Describe the emergency situation in detail...&#10;&#10;Example: Massive grease fire in the main kitchen of the Grand Hotel. Three chefs have severe burns. Smoke filling the building."
+        ></textarea>
+        <div class="action-buttons">
+          <input type="file" id="fileUpload" style="display: none;" accept="image/*,application/pdf,text/plain" onchange="handleFileUpload(event)">
+          <button class="attach-btn" id="attachBtn" onclick="document.getElementById('fileUpload').click()" title="Attach File/Image">📎</button>
+          <button class="mic-btn" id="micBtn" onclick="toggleMic()" title="Voice Input (Speech-to-Text)">🎙️</button>
+        </div>
+      </div>
+      <div id="filePreview" class="file-preview" style="display: none;">
+        <span id="fileName"></span>
+        <button class="remove-file-btn" onclick="removeFile()" title="Remove file">✕</button>
+      </div>
+    </div>
+
+    <!-- Dispatch Button -->
+    <button class="dispatch-btn" id="dispatchBtn" onclick="sendDispatch()">
+      <span class="btn-text">🚨 Analyze & Dispatch</span>
+      <span class="btn-loading">
+        <div class="spinner"></div>
+        Processing...
+      </span>
+    </button>
+
+    <!-- Info footer -->
+    <div style="text-align:center; margin-top:auto; padding-top:12px; border-top:1px solid var(--border-color);">
+      <p style="font-size:0.65rem; color:var(--text-muted); line-height:1.6;">
+        Powered by LangGraph + Groq AI<br>
+        Maps by Leaflet + OpenStreetMap<br>
+        GDG Hackathon 2026
+      </p>
+    </div>
+  </aside>
+
+  <!-- RIGHT PANEL: Map + Results -->
+  <section class="panel-right">
+    <div id="map"></div>
+    <div class="results-area" id="resultsArea">
+      <div class="results-placeholder">
+        <div class="icon">🗺️</div>
+        <p>Submit an incident report to activate the AI dispatch system. Emergency units will appear on the map above.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- RIGHT PANEL: Helpline Numbers -->
+  <aside class="panel-helpline">
+    <div class="section-label" style="margin-bottom: 8px;">📞 Emergency Helplines</div>
+    
+    <div class="helpline-card police">
+      <div class="helpline-title">🚓 Police</div>
+      <div class="helpline-number">100</div>
+      <div class="helpline-desc">For security threats, crimes, and immediate police assistance.</div>
+    </div>
+    
+    <div class="helpline-card fire">
+      <div class="helpline-title">🚒 Fire & Rescue</div>
+      <div class="helpline-number">101</div>
+      <div class="helpline-desc">For fire emergencies, rescues, and hazardous leaks.</div>
+    </div>
+    
+    <div class="helpline-card medical">
+      <div class="helpline-title">🚑 Ambulance</div>
+      <div class="helpline-number">102</div>
+      <div class="helpline-desc">For critical medical emergencies and trauma care.</div>
+    </div>
+    
+    <div class="helpline-card disaster">
+      <div class="helpline-title">🌪️ Disaster Management</div>
+      <div class="helpline-number">108</div>
+      <div class="helpline-desc">National Emergency Number for natural disasters and mass casualties.</div>
+    </div>
+  </aside>
+
+</main>
+
+<!-- App Logic -->
+<script src="/static/app.js"></script>
+
+</body>
+</html>

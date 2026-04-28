@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crisis Dispatch — Command Dashboard</title>
+  <meta name="description" content="Real-time emergency incident monitoring dashboard for supervisors and command staff.">
+
+  <!-- Leaflet.js -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <!-- jsPDF for Reports -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- Shared Styles -->
+  <link rel="stylesheet" href="/static/styles.css">
+
+  <style>
+    /* ── Dashboard-specific overrides ── */
+    .dash-layout {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      grid-template-rows: 1fr;
+      min-height: calc(100vh - 52px);
+      position: relative;
+      z-index: 1;
+    }
+
+    /* LEFT: incident feed */
+    .feed-panel {
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .feed-header {
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .feed-header h2 {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+    }
+
+    .feed-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge-count {
+      background: var(--accent-red);
+      color: white;
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 20px;
+      min-width: 22px;
+      text-align: center;
+    }
+
+    .refresh-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      box-shadow: 0 0 8px var(--accent-green-glow);
+      animation: pulse-glow 2s infinite;
+    }
+
+    .feed-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .feed-empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      gap: 10px;
+      text-align: center;
+      padding: 40px 24px;
+    }
+
+    .feed-empty .icon { font-size: 2.5rem; opacity: 0.4; }
+    .feed-empty p { font-size: 0.82rem; line-height: 1.6; max-width: 240px; }
+
+    /* Incident card */
+    .inc-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 14px;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+      animation: slideUp 0.35s ease-out;
+    }
+
+    .inc-card:hover {
+      border-color: rgba(148,163,184,0.6);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-1px);
+    }
+
+    .inc-card.active {
+      border-color: var(--accent-red);
+      box-shadow: 0 0 0 2px var(--accent-red-glow);
+    }
+
+    .inc-card.CRITICAL, .inc-card.MASS_CASUALTY { border-left: 3px solid var(--accent-red); }
+    .inc-card.HIGH   { border-left: 3px solid var(--accent-orange); }
+    .inc-card.MODERATE { border-left: 3px solid var(--accent-yellow); }
+    .inc-card.LOW    { border-left: 3px solid var(--accent-green); }
+
+    .inc-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .inc-id {
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .inc-time {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+    }
+
+    .inc-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .inc-category {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .inc-units {
+      display: flex;
+      gap: 4px;
+    }
+
+    .unit-pill {
+      font-size: 0.6rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .unit-pill.medical { background: rgba(220,38,38,0.1); color: var(--accent-red); }
+    .unit-pill.fire    { background: rgba(234,88,12,0.1);  color: var(--accent-orange); }
+    .unit-pill.police  { background: rgba(37,99,235,0.1);  color: var(--accent-blue); }
+
+    .inc-summary {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* RIGHT: map + detail */
+    .map-panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #dash-map {
+      width: 100%;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* Stats bar above map */
+    .stats-bar {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      flex-shrink: 0;
+    }
+
+    .stat-item {
+      flex: 1;
+      padding: 12px 16px;
+      border-right: 1px solid var(--border-color);
+      text-align: center;
+    }
+
+    .stat-item:last-child { border-right: none; }
+
+    .stat-val {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+
+    .stat-val.red   { color: var(--accent-red); }
+    .stat-val.orange { color: var(--accent-orange); }
+    .stat-val.blue  { color: var(--accent-blue); }
+    .stat-val.green { color: var(--accent-green); }
+    
+    .feed-scroll.hide-archive .inc-card.resolved {
+      display: none !important;
+    }
+    .inc-card.resolved {
+      opacity: 0.6;
+      background: rgba(255, 255, 255, 0.02);
+      filter: grayscale(0.5);
+    }
+
+    /* Resolve Button */
+    .resolve-btn {
+      width: 100%;
+      padding: 14px;
+      background: #16a34a;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 800;
+      font-size: 0.9rem;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+      font-family: 'Inter', sans-serif;
+    }
+    .resolve-btn:hover {
+      background: #15803d;
+      transform: translateY(-2px);
+    }
+    
+    #archiveToggle {
+      padding: 12px;
+      text-align: left;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.05);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+    #archiveToggle:hover { background: rgba(255, 255, 255, 0.08); color: var(--text-primary); }
+    #archiveToggle .chevron { 
+      font-size: 1rem; 
+      transition: transform 0.3s; 
+      transform: rotate(0deg); 
+      color: var(--text-muted);
+    }
+    .feed-scroll.hide-archive #archiveToggle .chevron { transform: rotate(90deg); }
+    #archiveToggle:hover .chevron { color: var(--text-primary); }
+
+    .stat-lbl {
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    /* Detail drawer at bottom */
+    .detail-drawer {
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease;
+      flex-shrink: 0;
+    }
+
+    .detail-drawer.open { max-height: 260px; }
+
+    .detail-inner {
+      padding: 16px 20px;
+      overflow-y: auto;
+      max-height: 260px;
+    }
+
+    .detail-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .detail-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .detail-close {
+      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .detail-close:hover { background: var(--bg-primary); }
+
+    /* PDF Buttons */
+    .pdf-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      margin-left: 15px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-family: 'Inter', sans-serif;
+    }
+    .pdf-btn:hover { background: rgba(255,255,255,0.1); border-color: var(--text-muted); }
+
+    .inc-card .inc-id { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); }
+    .inc-card .inc-time, 
+    .inc-card .inc-category,
+    .inc-card .inc-arrival,
+    .inc-card .inc-summary { font-family: 'Inter', sans-serif; }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .detail-cell {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+
+    .detail-cell .label {
+      font-size: 0.58rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 3px;
+    }
+
+    .detail-cell .value {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .detail-units {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .detail-unit-card {
+      flex: 1;
+      min-width: 100px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+
+    .detail-unit-card.medical { border-top: 2px solid var(--accent-red); }
+    .detail-unit-card.fire    { border-top: 2px solid var(--accent-orange); }
+    .detail-unit-card.police  { border-top: 2px solid var(--accent-blue); }
+
+    .detail-unit-card .u-label {
+      font-size: 0.58rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .detail-unit-card .u-name {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .detail-unit-card .u-dist {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+    }
+
+    /* nav link */
+    .nav-link {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 5px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+
+    .nav-link:hover {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+
+    @media (max-width: 900px) {
+      .dash-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+      }
+      .feed-panel {
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        max-height: 40vh;
+      }
+      #dash-map { min-height: 300px; }
+      .detail-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <div class="pulse-dot"></div>
+    <span id="stationDisplay" style="color:var(--text-primary); font-weight:900; letter-spacing:1px; margin-right:10px;">● LOADING...</span>
+    <span id="agencyBadge" class="unit-pill">...</span>
+    <button class="pdf-btn" onclick="downloadAllReportsPDF()">
+      📄 DOWNLOAD ALL REPORTS
+    </button>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px;">
+    <div class="topbar-status">
+      <div class="dot"></div>
+      <span id="lastRefreshed">Live</span>
+    </div>
+    <a href="/heatmap" target="_blank" class="nav-link">🗺️ View Global Heatmap</a>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="dash-layout">
+
+  <!-- LEFT: Incident Feed -->
+  <aside class="feed-panel">
+    <div class="feed-header">
+      <h2>📋 Live Incidents</h2>
+      <div class="feed-meta">
+        <span class="badge-count" id="incCount">0</span>
+        <div class="refresh-dot" title="Auto-refreshing every 5s"></div>
+      </div>
+    </div>
+    <div class="feed-scroll" id="feedScroll">
+      <div id="archiveToggle" onclick="document.getElementById('feedScroll').classList.toggle('hide-archive')">
+        <span>ARCHIVED INCIDENTS</span>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="feed-empty" id="feedEmpty">
+        <div class="icon">📡</div>
+        <p>Waiting for incoming incidents.</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- RIGHT: Map + Stats + Detail -->
+  <section class="map-panel">
+
+    <!-- Stats bar -->
+    <div class="stats-bar">
+      <div class="stat-item">
+        <div class="stat-val" id="statTotal">0</div>
+        <div class="stat-lbl">Total</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val red" id="statCritical">0</div>
+        <div class="stat-lbl">Critical</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val orange" id="statHigh">0</div>
+        <div class="stat-lbl">High</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val blue" id="statMedical">0</div>
+        <div class="stat-lbl">Medical</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val orange" id="statFire">0</div>
+        <div class="stat-lbl">Fire</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val green" id="statPolice">0</div>
+        <div class="stat-lbl">Police</div>
+      </div>
+    </div>
+
+    <!-- Map -->
+    <div id="dash-map"></div>
+
+    <!-- Detail Drawer -->
+    <div class="detail-drawer" id="detailDrawer">
+      <div class="detail-inner" id="detailInner"></div>
+    </div>
+
+  </section>
+</main>
+
+<script>
+  const stationName = localStorage.getItem('responder_station');
+  const agencyType = localStorage.getItem('responder_agency');
+
+  if (!stationName) {
+      window.location.href = '/login';
+  }
+
+  // Update UI with station name
+  document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('stationDisplay').textContent = `Dispatch: ${stationName}`;
+      const badge = document.getElementById('agencyBadge');
+      badge.textContent = agencyType || 'COMMAND';
+      badge.className = `unit-pill ${agencyType ? agencyType.toLowerCase() : ''}`;
+  });
+
+  const INCIDENTS_URL = `/api/v1/incidents/${encodeURIComponent(stationName)}`;
+  const POLL_MS = 5000;
+
+  let dashMap, markersGroup;
+  let incidents = [];
+  let activeId = null;
+  let showResolved = localStorage.getItem('dash_show_resolved') === 'true';
+  let incidentMarkers = {};
+
+  const severityEmoji = {
+    CRITICAL: '🔴', MASS_CASUALTY: '☢️', HIGH: '🟠', MODERATE: '🟡', LOW: '🟢'
+  };
+
+  const categoryEmoji = {
+    MEDICAL: '🏥', FIRE: '🔥', SECURITY: '🚓',
+    CHEMICAL: '☣️', STRUCTURAL: '🏗️', NATURAL_DISASTER: '🌪️'
+  };
+
+  // ── MAP ──
+  function initMap() {
+    const responderLat = parseFloat(localStorage.getItem('responder_lat')) || 23.0225;
+    const responderLon = parseFloat(localStorage.getItem('responder_lon')) || 72.5714;
+    const homeLatLng = [responderLat, responderLon];
+
+    dashMap = L.map('dash-map', {
+      center: homeLatLng,
+      zoom: 13,
+      zoomControl: false
+    });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19
+    }).addTo(dashMap);
+
+    L.control.zoom({ position: 'topright' }).addTo(dashMap);
+    
+    // Add Home Station Marker
+    const colorMap = { 'Hospital': '#ef4444', 'Fire': '#f97316', 'Police': '#3b82f6' };
+    const emojiMap = { 'Hospital': '🏥', 'Fire': '🚒', 'Police': '🚓' };
+    
+    L.marker(homeLatLng, { icon: makeIcon(emojiMap[agencyType] || '📍', colorMap[agencyType] || '#64748b', true) })
+      .addTo(dashMap)
+      .bindPopup(`<b>HOME STATION</b><br>${stationName}`);
+
+    L.control.attribution({ position: 'bottomright', prefix: false })
+      .addAttribution('&copy; <a href="https://www.openstreetmap.org/">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>')
+      .addTo(dashMap);
+
+    markersGroup = L.layerGroup().addTo(dashMap);
+  }
+
+  function makeIcon(emoji, color, small = false) {
+    const size = small ? 28 : 36;
+    return L.divIcon({
+      className: '',
+      html: `<div style="
+        width:${size}px;height:${size}px;border-radius:${small ? '50%' : '8px'};
+        background:${color};display:flex;align-items:center;justify-content:center;
+        font-size:${small ? '12' : '16'}px;border:2px solid white;
+        box-shadow:0 4px 12px rgba(0,0,0,0.3);">${emoji}</div>`,
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+      popupAnchor: [0, -size / 2 - 4]
+    });
+  }
+
+  // ── FETCH & POLL ──
+  async function fetchIncidents() {
+    try {
+      const res = await fetch(INCIDENTS_URL);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      incidents = data || [];
+      
+      renderFeed();
+      renderMapMarkers();
+      updateStats();
+      document.getElementById('lastRefreshed').textContent = `Live — updated ${new Date().toLocaleTimeString()}`;
+    } catch (e) {
+      document.getElementById('lastRefreshed').textContent = '⚠️ Cannot reach API';
+    }
+  }
+
+  // ── STATS ──
+  function updateStats() {
+    const total = incidents.length;
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statCritical').textContent =
+      incidents.filter(i => i.triage_analysis?.severity_level === 'CRITICAL' || i.triage_analysis?.severity_level === 'MASS_CASUALTY').length;
+    document.getElementById('statHigh').textContent =
+      incidents.filter(i => i.triage_analysis?.severity_level === 'HIGH').length;
+    document.getElementById('statMedical').textContent =
+      incidents.filter(i => i.triage_analysis?.crisis_category === 'MEDICAL').length;
+    document.getElementById('statFire').textContent =
+      incidents.filter(i => i.triage_analysis?.crisis_category === 'FIRE').length;
+    document.getElementById('statPolice').textContent =
+      incidents.filter(i => i.triage_analysis?.crisis_category === 'SECURITY').length;
+  }
+
+  // ── FEED ──
+  function renderFeed() {
+    const scroll = document.getElementById('feedScroll');
+    const empty = document.getElementById('feedEmpty');
+    const active = incidents.filter(i => i.status !== 'RESOLVED');
+    const resolved = incidents.filter(i => i.status === 'RESOLVED');
+    
+    document.getElementById('incCount').textContent = active.length;
+
+    if (incidents.length === 0) {
+      empty.style.display = 'flex';
+      scroll.innerHTML = '';
+      return;
+    }
+    empty.style.display = 'none';
+
+    active.forEach((inc, index) => {
+      renderCard(inc, scroll, index);
+    });
+
+    let toggle = document.getElementById('archiveToggle');
+    if (resolved.length > 0) {
+      if (!toggle) {
+        toggle = document.createElement('div');
+        toggle.id = 'archiveToggle';
+      }
+      if (active.length === 0) empty.style.display = 'none';
+      scroll.appendChild(toggle);
+      
+      const isHidden = scroll.classList.contains('hide-archive');
+      toggle.innerHTML = `<span>HISTORY / RESOLVED (${resolved.length})</span><span class="chevron">▼</span>`;
+      toggle.onclick = (e) => {
+        e.stopPropagation();
+        const nowHidden = scroll.classList.toggle('hide-archive');
+        showResolved = !nowHidden;
+        localStorage.setItem('dash_show_resolved', showResolved);
+        renderMapMarkers();
+      };
+    } else if (toggle) {
+      toggle.remove();
+    }
+
+    resolved.forEach(inc => {
+      renderCard(inc, scroll);
+    });
+  }
+
+  function renderCard(inc, scroll, index = null) {
+    const t = inc.triage_analysis || {};
+    const u = inc.dispatched_units || {};
+    const cat = t.crisis_category || 'UNKNOWN';
+    const sev = t.severity_level || 'LOW';
+    const time = inc.timestamp ? new Date(inc.timestamp).toLocaleTimeString() : '';
+    const isResolved = inc.status === 'RESOLVED';
+
+    let card = scroll.querySelector(`[data-id="${inc.id}"]`);
+    if (!card) {
+      card = document.createElement('div');
+      card.dataset.id = inc.id;
+      card.addEventListener('click', () => selectIncident(inc.id));
+    }
+    
+    if (index !== null && scroll.children[index] !== card) {
+        scroll.insertBefore(card, scroll.children[index]);
+    } else if (index === null) {
+        scroll.appendChild(card);
+    }
+
+    const agencyToUnit = { 'Hospital': 'medical', 'Fire': 'fire', 'Police': 'police' };
+    const myUnit = u[agencyToUnit[agencyType]];
+    const etaMinutes = myUnit ? (myUnit.estimated_eta_minutes || 0) : 0;
+    const arrivalTime = inc.timestamp ? new Date(new Date(inc.timestamp).getTime() + etaMinutes * 60000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '—';
+    const activeUnits = [];
+    if (u.medical && u.medical.status !== 'Not Required') activeUnits.push('medical');
+    if (u.fire    && u.fire.status    !== 'Not Required') activeUnits.push('fire');
+    if (u.police  && u.police.status  !== 'Not Required') activeUnits.push('police');
+    const unitPills = activeUnits.map(type => `<span class="unit-pill ${type}">${type}</span>`).join('');
+
+    card.className = `inc-card ${sev} ${isResolved ? 'resolved' : ''} ${activeId === inc.id ? 'active' : ''}`;
+    card.innerHTML = `
+      <div class="inc-top">
+        <span class="inc-id">${inc.id} ${isResolved ? '✅' : ''}</span>
+        <span class="inc-time">${time}</span>
+      </div>
+      <div class="inc-row">
+        <span class="inc-category">
+          ${categoryEmoji[cat] || '⚠️'} ${cat}
+          &nbsp;<span class="severity-badge severity-${sev}">${sev}</span>
+        </span>
+        <div class="inc-units">${unitPills}</div>
+      </div>
+      <div class="inc-arrival">Arrival: <span style="color:var(--accent-green)">${arrivalTime}</span></div>
+      <div class="inc-summary">${t.tts_summary || 'No summary available.'}</div>`;
+  }
+
+  // ── MAP MARKERS ──
+  function renderMapMarkers() {
+    markersGroup.clearLayers();
+    incidentMarkers = {};
+
+    const toShow = showResolved ? incidents : incidents.filter(i => i.status !== 'RESOLVED');
+
+    toShow.forEach(inc => {
+      const t = inc.triage_analysis || {};
+      const u = inc.dispatched_units || {};
+
+      const userLoc = inc.user_location || {};
+      const llmLoc  = t.location || {};
+      const lat = userLoc.latitude  || llmLoc.latitude;
+      const lon = userLoc.longitude || llmLoc.longitude;
+      if (!lat || !lon) return;
+
+      const sev = t.severity_level || 'LOW';
+      const sevColor = { CRITICAL: '#dc2626', MASS_CASUALTY: '#7c3aed', HIGH: '#ea580c', MODERATE: '#ca8a04', LOW: '#16a34a' };
+      const cat = t.crisis_category || 'MEDICAL';
+      const catEmoji = categoryEmoji[cat] || '⚠️';
+
+      const markers = [];
+
+      const epicenter = L.marker([lat, lon], { icon: makeIcon(catEmoji, sevColor[sev] || '#64748b') })
+        .bindPopup(`<strong>${inc.id}</strong><br>${cat} — ${sev}<br>${t.tts_summary || ''}`);
+      markersGroup.addLayer(epicenter);
+      markers.push(epicenter);
+
+      const colorMap = { medical: '#ef4444', fire: '#f97316', police: '#3b82f6' };
+      const emojiMap = { medical: '🏥', fire: '🚒', police: '🚓' };
+
+      const agencyToUnit = { 'Hospital': 'medical', 'Fire': 'fire', 'Police': 'police' };
+      const myUnitType = agencyToUnit[agencyType];
+
+      ['medical', 'fire', 'police'].forEach(type => {
+        const unit = u[type];
+        if (!unit || unit.status === 'Not Required') return;
+        if (type !== myUnitType) return;
+
+        const uLat = unit.latitude, uLon = unit.longitude;
+        if (!uLat || !uLon) return;
+
+        const uName = unit.unit_name || unit.hospital_name || type;
+        const uMarker = L.marker([uLat, uLon], { icon: makeIcon(emojiMap[type], colorMap[type], true) })
+          .bindPopup(`<strong>${emojiMap[type]} ${uName}</strong><br>📏 ${unit.distance_km} km<br>${unit.ai_reasoning || ''}`);
+        markersGroup.addLayer(uMarker);
+        markers.push(uMarker);
+
+        const line = L.polyline([[lat, lon], [uLat, uLon]], {
+          color: colorMap[type], weight: 1.5, opacity: 0.5, dashArray: '6 6'
+        });
+        markersGroup.addLayer(line);
+        markers.push(line);
+      });
+
+      incidentMarkers[inc.id] = { lat, lon, markers, epicenter };
+    });
+
+    if (Object.keys(incidentMarkers).length > 0) {
+      const allLatLngs = [];
+      Object.values(incidentMarkers).forEach(info => allLatLngs.push([info.lat, info.lon]));
+      dashMap.fitBounds(allLatLngs, { padding: [40, 40], maxZoom: 14 });
+    }
+  }
+
+  // ── SELECTION ──
+  function selectIncident(id) {
+    if (!id) return;
+    activeId = id;
+    
+    // Highlight card visually
+    document.querySelectorAll('.inc-card').forEach(el => {
+      el.classList.toggle('active', el.dataset.id === id);
+    });
+
+    const inc = incidents.find(i => i.id === id);
+    if (!inc) return;
+
+    // FLY TO LOCATION (Work for all incidents, including history)
+    const t = inc.triage_analysis || {};
+    const loc = inc.user_location || t.location || {};
+    const lat = loc.latitude, lon = loc.longitude;
+    
+    if (lat && lon && dashMap) {
+      dashMap.flyTo([lat, lon], 14, { duration: 0.8 });
+    }
+
+    renderDetail(inc);
+  }
+
+  function buildUnitCard(type, unit) {
+    if (!unit) return '';
+    const isNotReq = unit.status === 'Not Required';
+    const unitName = unit.hospital_name || unit.unit_name || unit.name || 'Unknown';
+    
+    return `
+      <div class="unit-card ${type} ${isNotReq ? 'not-required' : ''}">
+        <div class="unit-header" style="display:flex; align-items:center; gap:10px;">
+          <div class="unit-icon-mini">${type === 'medical' ? '🏥' : type === 'fire' ? '🚒' : '🚓'}</div>
+          <div>
+            <div class="unit-name-mini">Dispatch: ${unitName}</div>
+            <div class="unit-type-mini">${type.toUpperCase()}</div>
+          </div>
+        </div>
+        ${isNotReq ? '' : `
+        <div class="unit-meta" style="display:flex; justify-content:space-between; margin-top:10px;">
+          <div class="unit-meta-item">
+            <div class="label" style="font-size:0.6rem; color:var(--text-muted);">Distance</div>
+            <div class="value" style="font-size:0.8rem; font-weight:700;">${unit.distance_km || '—'} km</div>
+          </div>
+          <div class="unit-meta-item">
+            <div class="label" style="font-size:0.6rem; color:var(--text-muted);">ETA</div>
+            <div class="value" style="font-size:0.8rem; font-weight:700; color:var(--accent-red)">${unit.estimated_eta_minutes || 0} min</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <div class="label" style="font-size:0.6rem; color:var(--text-muted);">AI Reasoning</div>
+          <div class="value" style="font-size:0.7rem; line-height:1.3; opacity:0.8;">${unit.ai_reasoning || '—'}</div>
+        </div>
+        `}
+      </div>
+    `;
+  }
+
+  function renderDetail(inc) {
+    if (!inc) return;
+    const t = inc.triage_analysis || {};
+    const u = inc.dispatched_units || {};
+    const loc = t.location || {};
+    const sev = t.severity_level || 'LOW';
+
+    const agencyToUnit = { 'Hospital': 'medical', 'Fire': 'fire', 'Police': 'police' };
+    const myUnitType = agencyToUnit[agencyType];
+    const myUnit = u[myUnitType];
+
+    let mediaHtml = '';
+    if (inc.media_url) {
+        if (inc.media_url.endsWith('.mp4') || inc.media_url.endsWith('.mov')) {
+            mediaHtml = `<video src="${inc.media_url}" controls style="width:100%; border-radius:10px; margin-top:15px;"></video>`;
+        } else {
+            mediaHtml = `<img src="${inc.media_url}" style="width:100%; border-radius:10px; margin-top:15px; cursor:zoom-in;" onclick="window.open(this.src)">`;
+        }
+    }
+
+    let resolveHtml = '';
+    if (inc.status === 'RESOLVED') {
+      resolveHtml = '<div style="text-align:center; color:var(--accent-green); margin-top:15px; font-weight:700;">✅ RESOLVED</div>';
+    } else {
+      const now = new Date();
+      const reportTime = new Date(inc.timestamp || Date.now());
+      const etaMins = myUnit ? (myUnit.estimated_eta_minutes || 0) : 0;
+      const arrivalTime = new Date(reportTime.getTime() + etaMins * 60000);
+      
+      if (now >= arrivalTime || etaMins === 0) {
+        resolveHtml = `<button class="resolve-btn" onclick="resolveIncident('${inc.id}')">MARK AS RESOLVED</button>`;
+      } else {
+        const diffMins = Math.ceil((arrivalTime - now) / 60000);
+        resolveHtml = `<div style="text-align:center; padding:12px; margin-top:15px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px dashed var(--border-color); color:var(--text-muted); font-size:0.85rem;">Unit en route. Arriving in ~${diffMins} min</div>`;
+      }
+    }
+
+    document.getElementById('detailInner').innerHTML = `
+      <div class="detail-row">
+        <div class="detail-title">${inc.id} &nbsp; <span class="severity-badge severity-${sev}">${sev}</span></div>
+        <button class="detail-close" onclick="closeDetail()">✕ Close</button>
+      </div>
+      <div class="detail-grid">
+        <div class="detail-cell" style="grid-column: span 2">
+          <div class="label">Incident Summary</div>
+          <div class="value" style="font-weight:400; font-size:0.85rem; line-height:1.4;">${t.tts_summary || '—'}</div>
+        </div>
+        <div class="detail-cell">
+          <div class="label">Category</div>
+          <div class="value">${categoryEmoji[t.crisis_category] || ''} ${t.crisis_category || '—'}</div>
+        </div>
+        <div class="detail-cell">
+          <div class="label">Est. Victims</div>
+          <div class="value">${t.estimated_victims ?? '—'}</div>
+        </div>
+      </div>
+      ${mediaHtml}
+      <div class="detail-units" style="margin-top:15px;">
+        ${buildUnitCard(myUnitType, myUnit)}
+      </div>
+      ${resolveHtml}
+    `;
+    document.getElementById('detailDrawer').classList.add('open');
+  }
+
+  async function resolveIncident(id) {
+    if (!confirm('Mark this incident as resolved?')) return;
+    try {
+      const res = await fetch(`/api/v1/incidents/${id}/resolve?station_name=${encodeURIComponent(stationName)}`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        await fetchIncidents();
+        closeDetail();
+        const homeLat = parseFloat(localStorage.getItem('station_lat')) || 19.076;
+        const homeLon = parseFloat(localStorage.getItem('station_lon')) || 72.8777;
+        if (dashMap) dashMap.flyTo([homeLat, homeLon], 13, { duration: 1.5 });
+      }
+    } catch (e) {
+      alert('Failed to resolve incident');
+    }
+  }
+
+  function downloadAllReportsPDF() {
+    if (incidents.length === 0) return alert('No incidents to report.');
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const agencyToUnit = { 'Hospital': 'medical', 'Fire': 'fire', 'Police': 'police' };
+    const unitType = agencyToUnit[agencyType];
+
+    incidents.forEach((inc, index) => {
+      if (index > 0) doc.addPage();
+      const t = inc.triage_analysis || {};
+      const u = inc.dispatched_units || {};
+      doc.setFont("helvetica", "bold").setFontSize(22).setTextColor(220, 38, 38).text("EMERGENCY INCIDENT REPORT", 105, 20, { align: "center" });
+      doc.setDrawColor(200, 200, 200).line(20, 25, 190, 25);
+      doc.setFontSize(12).setTextColor(0, 0, 0).text(`Incident ID: ${inc.id}`, 20, 35);
+      doc.text(`Report Time: ${new Date(inc.timestamp).toLocaleString()}`, 20, 42);
+      doc.text(`Status: ${inc.status}`, 20, 49);
+      doc.setFontSize(14).text("TRIAGE ANALYSIS", 20, 60);
+      doc.setFont("helvetica", "normal").setFontSize(11).text(`Category: ${t.crisis_category}`, 20, 67);
+      doc.text(`Severity: ${t.severity_level}`, 20, 74);
+      const summaryLines = doc.splitTextToSize(`Summary: ${t.tts_summary}`, 170);
+      doc.text(summaryLines, 20, 81);
+      let currentY = 81 + (summaryLines.length * 5) + 10;
+      doc.setFont("helvetica", "bold").setFontSize(14).text("DISPATCH DETAILS", 20, currentY);
+      doc.setFont("helvetica", "normal").setFontSize(11);
+      const unit = u[unitType];
+      if (unit) {
+        const unitName = unit.hospital_name || unit.unit_name || unit.name || 'Unknown';
+        doc.text(`Responding Unit: ${unitName} (${agencyType})`, 20, currentY + 7);
+        doc.text(`Distance: ${unit.distance_km} km`, 20, currentY + 14);
+      }
+    });
+    doc.save(`${stationName.replace(/\s+/g, '_')}_Master_Log.pdf`);
+  }
+
+  function closeDetail() {
+    document.getElementById('detailDrawer').classList.remove('open');
+    document.querySelectorAll('.inc-card').forEach(el => el.classList.remove('active'));
+    activeId = null;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initMap();
+    fetchIncidents();
+    setInterval(fetchIncidents, POLL_MS);
+    
+    const scroll = document.getElementById('feedScroll');
+    if (scroll && localStorage.getItem('dash_show_resolved') !== 'true') {
+        scroll.classList.add('hide-archive');
+    }
+  });
+</script>
+</body>
+</html>

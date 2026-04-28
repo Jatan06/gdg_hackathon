@@ -1,0 +1,236 @@
+latitude,longitude,osm_id,name,subdistrict,district,state,country
+78.53151330016897,21.593126399676414,4428579332,Fire Brigade,Pandhurna,Chhindwara,Madhya Pradesh,India
+81.73850710023018,21.183723199664417,4446184707,Airport Fire Station,Raipur,Raipur,Chhattisgarh,India
+81.83988909919171,25.447820599298662,2301227533,Fire Station,Allahabad,Prayagraj,Uttar Pradesh,India
+77.99951020010107,27.175086699437507,3759834557, ,Agra,Agra,Uttar Pradesh,India
+79.45362349999571,26.00446929966561,4723581163, ,Orai,Jalaun,Uttar Pradesh,India
+78.01882280012,30.345079599789422,6115840284,Fire Station,Dehradun,Dehradun,Uttarakhand,India
+85.21524930001918,19.762380900449532,2935214942,balugaon fire station,Balugaon,Khordha,Odisha,India
+86.36242199987598,23.33204639972968,3822901583, ,Purulia II,Purulia,West Bengal,India
+88.35486989933584,22.55789349969627,2813628983,West Bengal Fire Service HQ,Kolkata,Kolkata,West Bengal,India
+84.50064699962128,26.802044000401835,2044163259, ,Bettiah,Pashchim Champaran,Bihar,India
+88.25506849959147,27.02316500032324,2114145168,Darjeeling Fire Station,Darjeeling Pulbazar,Darjeeling,West Bengal,India
+84.09481000038546,18.77672189995188,6593022579, ,Paralakhemundi,Gajapati,Odisha,India
+84.99425139996876,19.35826599968083,6392671387,Chatrapur Fire Station,Chhatrapur,Ganjam,Odisha,India
+87.29511909954932,23.538462599752336,6757753082, ,Faridpur Durgapur,Paschim Bardhaman,West Bengal,India
+88.36176590015769,22.501376100471376,6541779885,Usha fire brigade,Kolkata,Kolkata,West Bengal,India
+86.99677290012521,25.25865980056248,4499475491,Malik,Jagdishpur,Bhagalpur,Bihar,India
+89.45328969921681,26.320335600271854,4506616174,Cooch Behar Fire Service,Cooch Behar I,Coochbehar,West Bengal,India
+84.78954370019748,19.312459000367237,7503415136,Fire station,Brahmapur M Corp,Ganjam,Odisha,India
+86.9761021003973,23.685537099877482,7466818593,Asansol Fire Brigade,Barabani,Paschim Bardhaman,West Bengal,India
+81.54576239984482,18.18854450059751,8850425161,Fire Station Podia,Podia,Malkangiri,Odisha,India
+86.54131569996468,21.51051899964818,9604962402,Kaptipada Fire station,Kaptipada,Mayurbhanj,Odisha,India
+86.56987370070064,21.573032100191174,9604825045,Fire Station Udala,Udala,Mayurbhanj,Odisha,India
+85.37522940029717,23.982859899883437,8552402076, ,Hazaribag,Hazaribagh,Jharkhand,India
+85.04117210058261,25.55989130017742,8411203149,AIIMS Patna Firestation,Phulwari,Patna,Bihar,India
+87.0348738999571,23.239888300412264,8294732968,Bankura Fire Station,Bankura I,Bankura,West Bengal,India
+88.36062829973304,22.577836699659194,9567719217,C R Avenue Fire Station,Kolkata,Kolkata,West Bengal,India
+88.73041220016827,26.515025499702,8039935436,Jalpaiguri Fire Station,Jalpaiguri,Jalpaiguri,West Bengal,India
+88.9073582000074,26.345714400376785,8377811524,Mekliganj Fire Brigade,Mekliganj,Coochbehar,West Bengal,India
+88.38685410061656,26.724783600004667,8168454969,Matigara Fire Brigade Office,Matigara,Darjeeling,West Bengal,India
+91.26938580026199,23.83243660021299,2681745519, ,Sadar,West Tripura,Tripura,India
+93.002606799793,24.79256089978741,2388196226,Fire Brigade,Lakhipur,Cachar,Assam,India
+94.53156809926641,26.32974680038978,2717151882,Fire Station,Ongpangkong,Mokokchung,Nagaland,India
+95.23004219976686,27.822439699663455,3546863558,Jonai Fire Service Station,Jonai,Dhemaji,Assam,India
+77.072964500287,28.463706999681943,332066858,Sushant Lok Fire Station,Gurgaon,Gurugram,Haryana,India
+77.1669817000192,28.572801200395578,372717372, ,Vasant Vihar,New Delhi,Delhi,India
+77.18431219970309,28.56856690026176,1114871812,Fire Station,Vasant Vihar,New Delhi,Delhi,India
+75.86335820007443,29.343755600619552,348323469,Thermal Plant,Hisar,Hisar,Haryana,India
+74.02709550031413,30.406929500211877,1248415462,Fire Brigade,Fazilka,Fazilka,Punjab,India
+75.5415021006198,30.373245999801714,835661329,Fire Brigade Station,Barnala,Barnala,Punjab,India
+74.61356709962496,30.918433700599962,1349277499,Cantonment Board Ferozepur,Firozpur,Firozepur,Punjab,India
+75.87392229978079,30.270854000058616,1485625688,Bhatha,Sangrur,Sangrur,Punjab,India
+75.88690419980296,30.280007400136082,1485625760,Bhatha,Sangrur,Sangrur,Punjab,India
+75.93054470036023,30.070610499847188,1481122651,Bhatha,Sunam,Sangrur,Punjab,India
+75.93122059996654,30.07912430004429,1481130480,Bhatha,Sunam,Sangrur,Punjab,India
+75.85045989996753,30.91931359950273,1487554971,Firebrigade Station,Ludhiana East,Ludhiana,Punjab,India
+76.85832169937468,30.69540910040656,842987834, ,Panchkula,Panchkula,Haryana,India
+77.17294900004246,31.10476789983008,1012095695,Shimla Fire Station,Shimla urban,Shimla,Himachal Pradesh,India
+88.49894689956021,27.2330317000775,4925330240,Singtam firestation,Gangtok,East District,Sikkim,India
+88.61398669994686,27.33210400002616,8058855486, ,Gangtok,East District,Sikkim,India
+91.37596350031664,23.828958100231027,6746947176,Ranirbazar fire service station,Jirania,West Tripura,Tripura,India
+91.29061490024404,23.858126700095628,6754560852, ,Sadar,West Tripura,Tripura,India
+91.28506050006136,23.825448799408395,9231655517,Maharajgang,Sadar,West Tripura,Tripura,India
+94.10407869951364,25.71350890025901,6255335872,Fire Brigade,Chiephobozou,Kohima,Nagaland,India
+93.96100839990565,26.498312999800174,7037458773,Golaghat Fire Brigade,Golaghat,Golaghat,Assam,India
+94.15791089958299,26.97478049983592,5265565022,Garamur fire & emergency services station,Majuli,Majuli,Assam,India
+75.75732720032866,26.93695219947276,4427339589, ,Jaipur,Jaipur,Rajasthan,India
+77.07962719964644,28.662320500290498,2683027313, ,Punjabi Bagh,West,Delhi,India
+77.14403459990407,28.65924770040236,2681845832, ,Patel Nagar,West,Delhi,India
+77.13900340010241,28.63299619993692,6225480221,Fire Station Naraina,Delhi Cantonment,New Delhi,Delhi,India
+77.0640234999922,28.597317699398175,4438230893,Sector 6 Fire Station,Dwarka,South West,Delhi,India
+77.09474379951595,28.548203399656806,6297789748,Fire Station 1,Vasant Vihar,New Delhi,Delhi,India
+77.19036459982814,28.602643999932063,5136715532,Fire Station Chanakyapuri,Chanakya Puri,New Delhi,Delhi,India
+77.20764460071833,28.62143489999457,5483331672, ,Chanakya Puri,New Delhi,Delhi,India
+77.21310959966563,28.58630379981587,5715392712,Fire Station Jor Bagh,Defence Colony,South East,Delhi,India
+77.18120659979837,28.64707560002684,2165822097, ,Karol Bagh,Central,Delhi,India
+77.21609700014358,28.659476000083306,6539125899, ,Sadar Bazar,Central,Delhi,India
+77.20437159976042,28.65636420012093,2714360373, ,Pahar Ganj,Central,Delhi,India
+75.23611639989709,30.277862600222072,1957973153,"Fire Brigade,Rampura Phul",Rampura Phul,Bathinda,Punjab,India
+74.79780109992312,34.07470370008201,5936065433, ,Srinagar North,Srinagar,Jammu And Kashmir,India
+76.2024233002741,29.955439899962055,4344846604,Shamshan Ghat Arnetu,Guhla,Kaithal,Haryana,India
+76.86341319948812,31.411476700509052,5763462267, ,Sundarnagar,Mandi,Himachal Pradesh,India
+76.94447579989796,31.701980000133307,5577800978,Fire Station Mandi,Mandi,Mandi,Himachal Pradesh,India
+76.53913540013097,32.11680760004002,2888418501,Agnishaman Kendra,Palampur,Kangra,Himachal Pradesh,India
+76.28330389931246,32.09808080008916,6611410538, ,Kangra,Kangra,Himachal Pradesh,India
+76.31812490031035,32.215154999837466,5087818814,Dharamsala Fire Brigade,Dharmsala,Kangra,Himachal Pradesh,India
+74.6204272998878,34.29054340035043,7677301202,Fire Service Station,Hajin,Bandipora,Jammu And Kashmir,India
+79.35138019993306,13.685232299904667,405392184,Tirumala Fire Station,Tirupati Urban,Chittoor,Andhra Pradesh,India
+80.23568160033031,13.06377649943737,264480826, ,Chennai,Chennai,Tamil Nadu,India
+80.24911899920217,13.047446900036588,302899362,Teynampet FS,Chennai,Chennai,Tamil Nadu,India
+78.48551370060639,17.443083200386802,582824404,S P Road Fire Station,Secunderabad,Hyderabad,Telangana,India
+80.14890610009076,17.256674300522047,798089786, ,Raghunadhapalem,Khammam,Telangana,India
+73.44867890011987,25.18885269975438,8909040185, ,Desuri,Pali,Rajasthan,India
+74.79229760008104,33.99832479984239,9067256077,Fire Service Station,Budgam,Budgam,Jammu And Kashmir,India
+74.78709620007577,34.09525649993449,9107554153,Fire and Emergency Station Safakadal,Srinagar North,Srinagar,Jammu And Kashmir,India
+74.80052830068409,34.09162659983147,9107548687,Fire and Emergency Station S.H Pora,Srinagar South,Srinagar,Jammu And Kashmir,India
+75.11752869970255,33.92577609994624,9642669885,Fire Service Station,Tral,Pulwama,Jammu And Kashmir,India
+72.19420379962435,10.86635079954887,1603833215, ,Agatti,Lakshadweep District,Lakshadweep,India
+75.72715489917937,12.425264500352894,1900761944, ,Madikeri,Kodagu,Karnataka,India
+75.38509920049934,12.575538900060764,1987151036, ,Sulya,Dakshina Kannada,Karnataka,India
+75.56752550028999,13.930133399563761,1813605986,Shimoga Fire Brigade,Shivamogga,Shivamogga,Karnataka,India
+77.117171400309,8.284414600517035,1623278706,Kollencode Fire Station,Vilavancode,Kanniyakumari,Tamil Nadu,India
+77.42019449949517,8.970830300052143,1918542001,Surandai Fire Station,Veerakeralamputhur,Tenkasi,Tamil Nadu,India
+77.85305120011986,8.33715689991542,1685476665,Tisaiyanvillai Fire Station,Radhapuram,Tirunelveli,Tamil Nadu,India
+76.99750139997873,11.039199299978074,942754044,Ganapathy FireStation,Coimbatore North,Coimbatore,Tamil Nadu,India
+76.9512394995397,11.293845000157397,1473264367,Mettupalayam Fire Station,Mettupalayam,Coimbatore,Tamil Nadu,India
+76.46500620010325,13.25889580006233,1465647252,Fire Station,Tiptur,Tumakuru,Karnataka,India
+76.12257930047981,13.008726100560112,2373933275,Hassan Fire Station,Hassan,Hassan,Karnataka,India
+75.93304190006911,14.458970599862372,1789651737,Davanagere Fire Station,Davanagere,Davangere,Karnataka,India
+77.61852789953737,13.048248699487619,928264962,Hebbal Fire Station,Bengaluru Urban,Bengaluru Urban,Karnataka,India
+77.60072039982757,12.933703600596985,1448262213,Jaynagar Fire Station,Bengaluru Urban,Bengaluru Urban,Karnataka,India
+77.6458789005014,13.011567599877122,1453308808,Banaswadi Fire Station,Bengaluru Urban,Bengaluru Urban,Karnataka,India
+77.56115380040627,12.922121900012602,1741801087,Fire Station,Bengaluru Urban,Bengaluru Urban,Karnataka,India
+80.23069220003714,13.035131299707599,2427727851, ,Chennai,Chennai,Tamil Nadu,India
+75.6403974999928,15.427376799674853,1474289502, ,Gadag,Gadag,Karnataka,India
+92.55778439944665,10.587115300157324,2167520192, ,Little Andaman,South Andamans,Andaman & Nicobar,India
+76.99204579920593,9.575443900019495,3816579578,"Fire and Rescue Station, Perumade",Peerumade,Idukki,Kerala,India
+80.13359640016438,12.943636099869707,3029313653,Tamil Nadu Fire and Rescue Services,Alandur,Chengalpattu,Tamil Nadu,India
+76.37840349979173,15.169799699892016,3207088571,BMM Fire station,Hosapete,Ballari,Karnataka,India
+76.5407272004414,15.078050900544875,3081416874, ,Sandur,Ballari,Karnataka,India
+78.5384578998477,17.42242069957319,3200943739, ,Marredpally,Hyderabad,Telangana,India
+81.7775267999166,16.9910851993947,3076342595,Fire Station,Rajahmundry Urban,East Godavari,Andhra Pradesh,India
+81.77069510050278,17.010721599963155,3076342596,Fire Station,Rajahmundry Urban,East Godavari,Andhra Pradesh,India
+77.95392119979361,9.593434100134871,4419269499,Virudhunagar Fire Station,Virudhunagar,Virudhunagar,Tamil Nadu,India
+78.15113529989017,11.653941299829514,4305461798, ,Salem,Salem,Tamil Nadu,India
+79.83198569964159,11.926059300270275,4316621643,Pondicherry Fire Department;Villa Labourdonna's Guest House,Puducherry Taluk,Pondicherry,Puducherry,India
+77.4259497998063,8.177842300520018,5003290157, ,Agastheeswaram,Kanniyakumari,Tamil Nadu,India
+76.31364069995655,10.069504099540517,4708279357,Fire and Rescue Station Vallarpadam,Paravur,Ernakulam,Kerala,India
+79.13126439967755,12.913877999820212,4693434964,Vellore Fire station,Vellore,Vellore,Tamil Nadu,India
+76.24705089931001,13.326636500006023,5118895338, ,Arsikere,Hassan,Karnataka,India
+76.00007559962003,14.783026300240625,5016657227, ,Harapanahalli,Davangere,Karnataka,India
+76.2325067005496,14.834821299938683,5003334123, ,Kotturu,Ballari,Karnataka,India
+81.53403009950198,16.543177000047105,5051609255,Bhimavaram Fire station,Bhimavaram,West Godavari,Andhra Pradesh,India
+82.53759729967419,17.357013100166363,5041287397,FIRE STATION,Tuni,East Godavari,Andhra Pradesh,India
+76.69603109984664,8.973753499993533,5991292659,Fire Station,Kollam,Kollam,Kerala,India
+80.22243109954658,12.83101729960688,5304198425, ,Sholinganallur,Chengalpattu,Tamil Nadu,India
+80.22763409945141,12.976852799935164,5354315736,Fire service station;Fire Force Service center,Chennai,Chennai,Tamil Nadu,India
+78.91478449999177,18.789196700133775,5466155231,Jagtial Fire Station,Jagitial,Jagitial,Telangana,India
+92.73729029960484,11.674235000285476,5252129921, ,Port Blair,South Andamans,Andaman & Nicobar,India
+83.20782330024538,17.668024199917028,5621265135,Pedda Gantyada Fore Station,Pedagantyada,Visakhapatanam,Andhra Pradesh,India
+78.07406700000067,12.295966900170868,6359499505, ,Palakkodu,Dharmapuri,Tamil Nadu,India
+77.38935920034369,13.099720100132334,6112964504,Nelamangala Fire Station,Nelamangala,Bengaluru Rural,Karnataka,India
+77.73218049990271,12.987234700528083,6343284080,Whitefield Fire Station,Bengaluru Urban,Bengaluru Urban,Karnataka,India
+79.70272449931215,11.393960900204466,6032167264,Fire Station Chidambaram,Chidambaram,Cuddalore,Tamil Nadu,India
+79.80011239987427,11.951914599178723,6485835443,Fire Control Room,Ozhukarai Taluk,Pondicherry,Puducherry,India
+80.17202109982408,12.988511499861886,6299267085, ,Alandur,Chengalpattu,Tamil Nadu,India
+77.45824039936245,15.755751400559976,6369635014,"Fire Station, Yemmiganur",Yemmiganur,Kurnool,Andhra Pradesh,India
+81.7330233004423,17.016299299345214,6364028885, ,Kovvur,West Godavari,Andhra Pradesh,India
+76.68812379993241,12.417296899459387,6630947655, ,Shrirangapattana,Mandya,Karnataka,India
+74.50796630037381,15.842796200151804,6845945393,Belgaum Fire Station,Belagavi,Belagavi,Karnataka,India
+78.28699760030337,16.500783100266244,6837577307,"Fire Station, Nagarkurnool",Nagarkurnool,Nagarkurnool,Telangana,India
+78.50195370034912,17.36851869986974,6652622187,Malakpet Fire Station,Amberpet,Hyderabad,Telangana,India
+79.53437500034792,17.9135649995418,6837577306,"Mulkalagudem, 33/11 KV Sub Station",Hanamkonda,Warangal Urban,Telangana,India
+77.67881009946645,13.003562900373765,6991535449,ITI Fire Station,Bengaluru Urban,Bengaluru Urban,Karnataka,India
+76.90448950038937,8.704495500031113,7130230413,Fire and Rescue Station Keezhayikonam,Nedumangad,Thiruvananthapuram,Kerala,India
+77.54850180038395,12.980666099823852,7139631441,Rajajinagar Fire Station,Bengaluru Urban,Bengaluru Urban,Karnataka,India
+75.6822741998122,11.684318000195386,7388516548,"Fire and Rescue Station, Chelakadu",Vatakara,Kozhikode,Kerala,India
+75.69361319975734,11.443714199703622,7456302701,Fire and Rescue Station Koyilandy,Koyilandi,Kozhikode,Kerala,India
+76.69593879974784,8.973522899697965,7441591079,Fire and Rescue Station Kundra,Kollam,Kollam,Kerala,India
+76.4125180000732,9.749681599961377,7517648167,Fire and Rescue Station Vaikom,Vaikom,Kottayam,Kerala,India
+76.28480870048251,9.96915800029753,7463868461,Fire And Rescue Station,Kanayannur,Ernakulam,Kerala,India
+76.79339720009344,9.264885499485159,7453415391,Fire and Rescue Station Pathanamthitta,Kozhenchery,Pathanamthitta,Kerala,India
+79.52373089937733,10.718775599510066,7348066258,Koothanallur Fire  Station,Needamangalam,Thiruvarur,Tamil Nadu,India
+76.11988759934226,11.109144799529574,7515405364,"Fire and Rescue Station, Manjeri",Ernad,Malappuram,Kerala,India
+79.5645526006591,18.001074099594767,7243989343, ,Hanamkonda,Warangal Urban,Telangana,India
+76.58369719936891,8.888475700200443,8068250599,Fire&Rescue Station Chamakkada,Kollam,Kollam,Kerala,India
+76.62695790030894,9.046763699527414,8067982146,Fire Station Sasthamcotta,Kunnathur,Kollam,Kerala,India
+76.21701500015008,10.517130099834247,8077369885,FIRESTATION THRISSUR,Thrissur,Thrissur,Kerala,India
+76.06763200008874,10.658830299902366,8078222391,"Fire and Rescue Station, Kunnamkulam",Kunnamkulam,Thrissur,Kerala,India
+78.21714319974342,12.52465749997779,7903002235, ,Krishnagiri,Krishnagiri,Tamil Nadu,India
+78.40888509999733,17.41270480026154,8111098052,panjagutta firestation,Shaikpet,Hyderabad,Telangana,India
+81.68869049973657,16.764174099898796,8116992449,Tanuku fire station,Undrajavaram,West Godavari,Andhra Pradesh,India
+83.63897120038382,18.452286399509376,8115058870,FIRE STATION,Rajam,Srikakulam,Andhra Pradesh,India
+75.69342680023422,11.44392839980712,8422730392,Fire Station,Koyilandi,Kozhikode,Kerala,India
+76.53600410032432,9.005842499833795,8559616288, ,Karunagappally,Kollam,Kerala,India
+77.16028419992568,8.347130000065432,8835878279,"Fire and Rescue Station, Parassala",Neyyattinkara,Thiruvananthapuram,Kerala,India
+76.62923910010771,9.048459500161165,8567498773, ,Kunnathur,Kollam,Kerala,India
+76.24202559964313,10.151737799918868,8843840992,"Fire Station, North Paravur",Paravur,Ernakulam,Kerala,India
+78.5395992992477,10.268208800188804,8541103819, ,Ponnamaravathi,Pudukkottai,Tamil Nadu,India
+78.82467110000657,18.10776619990794,8386142246, ,Siddipet Urban,Siddipet,Telangana,India
+74.98625340014932,12.509359100352844,9056899016,District Fire Office,Kasaragod,Kasaragod,Kerala,India
+77.075174900265,8.325157100836027,8987498155,"Fair and rescue Station, Poovar",Neyyattinkara,Thiruvananthapuram,Kerala,India
+76.34881460052058,9.497228200208996,9060927690,District Fire Office,Ambalappuzha,Alappuzha,Kerala,India
+76.52078819978496,9.58768219977332,9060927688,Office of District Fire Officer,Kottayam,Kottayam,Kerala,India
+76.52078740028438,9.587653600111187,9060927689,Regional Fire Office,Kottayam,Kottayam,Kerala,India
+76.29555520041235,9.974361400254775,9058337997,District Fire and Rescue Office Kadavanthra,Kanayannur,Ernakulam,Kerala,India
+76.35205390028227,9.935813900068288,9381658867,"Fire and rescue station ,Tripunithra",Kanayannur,Ernakulam,Kerala,India
+76.8520208000892,9.229288100028821,9287373633,FIRE STATION KONNI,Konni,Pathanamthitta,Kerala,India
+76.21687190032196,10.517501700180283,9058337974,District Fire and Rescue Office Thrissur,Thrissur,Thrissur,Kerala,India
+76.20535430002695,10.239629800401529,9289451217,Fire station,Kodungallur,Thrissur,Kerala,India
+76.21323400010237,10.361264700347444,9331656119,Irinjalakuda fire station,Mukundapuram,Thrissur,Kerala,India
+76.37410990038164,10.178250500516427,9285630419,Kerala fire and rescue station,Aluva,Ernakulam,Kerala,India
+76.23450699985403,10.149216899978743,9298333288,"Fire Station, North Paravur",Paravur,Ernakulam,Kerala,India
+76.65911769976981,10.759896700413673,9058337948,"Regional Fire Office, Fire and Rescue Services, Palakkad",Palakkad,Palakkad,Kerala,India
+76.6591182998444,10.759824800516094,9058337949,District Fire Office.Palakkad,Palakkad,Palakkad,Kerala,India
+76.47872249981967,10.86610429990931,9331495523,"Fire Station, Peringod",Palakkad,Palakkad,Kerala,India
+75.79930129998276,11.214532700084966,9057816794,REGIONAL FIRE OFFICE,Kozhikode,Kozhikode,Kerala,India
+77.52406249976718,13.602387699864854,8919834459,Gauribidanur Fire Station,Gauribidanur,Chikkaballapura,Karnataka,India
+77.70828140028378,13.67278919998595,8919834460,Gudibanda Fire Station,Gudibanda,Chikkaballapura,Karnataka,India
+72.99847079960787,19.07640459967388,1122048181,Vashi Fire Station,Thane,Thane,Maharashtra,India
+73.04060360013166,19.02442729972205,1648288786, ,Thane,Thane,Maharashtra,India
+73.11896899991777,18.996077300265174,1261803303,Fire Station,Panvel,Raigad,Maharashtra,India
+72.82915669957306,18.941481700220788,605222184, ,Mumbai,Mumbai,Maharashtra,India
+72.82605310021647,18.915454600102727,623417932,Colaba Fire Station,Mumbai,Mumbai,Maharashtra,India
+72.83196150040149,18.972456199991708,700725781,Byculla,Mumbai,Mumbai,Maharashtra,India
+72.83263919933331,18.95796229979468,861411346,Umerkhadi Fire Station,Mumbai,Mumbai,Maharashtra,India
+73.87429470075251,18.500477000425185,671451162,Pune Cantonment Fire Station,Pune City,Pune,Maharashtra,India
+73.81544699983944,18.47547669992675,1304723072,"Suncity Road Fire Station, Pune",Pune City,Pune,Maharashtra,India
+73.24134319964617,19.15393500048995,352677571, ,Ambarnath,Thane,Maharashtra,India
+78.47677490030226,17.359502300473608,8978092814,مغل پورہ فائر اسٹیشن,Bahadurpura,Hyderabad,Telangana,India
+69.68163959988854,23.239126799960427,1545194126, ,Bhuj,Kachchh,Gujarat,India
+72.51631709932127,23.039811600078046,429410556,Bodakdev Fire Station,Sabarmati,Ahmadabad,Gujarat,India
+72.55100129947783,23.045506199707788,436106992,Memnagar Fire Station,Sabarmati,Ahmadabad,Gujarat,India
+72.86399089951745,22.69140860003297,1740713596, ,Nadiad,Kheda,Gujarat,India
+73.79385000022269,15.53315999968285,4283890198,Pilerne,Bardez,Goa,Goa,India
+73.808770000199,15.589840999612841,4283907091,Mapusa,Bardez,Goa,Goa,India
+73.82003999964886,15.39976599983774,4283907393, ,Mormugao,Goa,Goa,India
+73.97030330017964,15.269329600238285,4269710993,Margao Fire Station,Salcete,Goa,Goa,India
+73.9355299997233,15.369550000193772,4283907394,Verna IDC fire Station,Salcete,Goa,Goa,India
+73.81914730063193,15.494651599967568,6122945885,dany place,Tiswadi,Goa,Goa,India
+74.26249070032146,17.05685909954152,4376875895,Islampur agnishaman,Walwa,Sangli,Maharashtra,India
+72.89351990002378,19.054524800100474,2311428475,Chembur Fire Station,Mumbai Suburban,Mumbai Suburban,Maharashtra,India
+72.86104100010934,19.175082000150017,2429102988,Gorgaon Fire Station,Mumbai Suburban,Mumbai Suburban,Maharashtra,India
+72.87223860073719,19.280593900250963,5255263122, ,Thane,Thane,Maharashtra,India
+73.13166700086914,19.068187399915722,3761594600, ,Panvel,Raigad,Maharashtra,India
+73.09923109971412,19.03927860000213,5102719433,Tawa Delight,Panvel,Raigad,Maharashtra,India
+72.83464170040845,18.93507349936024,2168679530,Fort Fire Brigade,Mumbai,Mumbai,Maharashtra,India
+72.85388689983162,19.039624099302323,2187315849,Testing Fire Station,Mumbai,Mumbai,Maharashtra,India
+73.81347970014701,18.498889399993327,2192111450,Kothrud Fire Station,Haveli,Pune,Maharashtra,India
+73.79649360017002,18.460236699745845,4204725189,Nanded City Fire Station,Haveli,Pune,Maharashtra,India
+72.82746909932746,19.405670499584716,4689269189, ,Vasai,Palghar,Maharashtra,India
+72.82785310036535,19.40570200067152,4821972821, ,Vasai,Palghar,Maharashtra,India
+75.32173960057897,19.862430100051192,3242344367,fire station,Aurangabad,Aurangabad,Maharashtra,India
+72.82116179954558,21.199815199883485,2629372542,Fire Station,Majura,Surat,Gujarat,India
+79.08033619959684,21.107274999823744,4984615984,Fire station,Nagpur Urban,Nagpur,Maharashtra,India
+79.08068170063827,21.107116699676848,6983064785,Narendra Nagar Fire Station,Nagpur Urban,Nagpur,Maharashtra,India
+79.29483750058056,19.962083000254008,4376877994,CMC fire station,Chandrapur,Chandrapur,Maharashtra,India
+72.62456429946681,22.983402900351585,4637012558,Jashodanagar Fire Station,Sabarmati,Ahmadabad,Gujarat,India
+73.2016377000207,22.3001135006188,2344004347, ,Vadodara Rural,Vadodara,Gujarat,India
+72.39022929924262,23.606509600097738,4496283273,Mehsana Muncipalty fire cantrol room,Mahesana,Mahesana,Gujarat,India
+72.8519209000014,19.292597999773534,7486324686,Mira Bhayander Mahanagarpalika Fire Bridage and Emergency centre,Thane,Thane,Maharashtra,India
+72.84120910019433,19.033117900515595,9024751917, ,Mumbai,Mumbai,Maharashtra,India
+73.71606769958247,18.62201100053805,8585616661,Life Republic Fire Station,Mulshi,Pune,Maharashtra,India
+74.64798659950495,19.39412620004608,8949470739, ,Rahuri,Ahmednagar,Maharashtra,India
+76.04530839995104,20.018417800705812,8316131973, ,Deolgaon Raja,Buldhana,Maharashtra,India
+74.30929449957416,35.92299380002546,4361264368, ,Data Not Available,Leh Ladakh,Ladakh,India
