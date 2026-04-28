@@ -19,3 +19,4 @@ langgraph>=0.1.0
 
 # ── Vector Store ──
 faiss-cpu>=1.7.0
+psycopg2-binary>=2.9.10

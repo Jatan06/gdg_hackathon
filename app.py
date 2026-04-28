@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -10,7 +10,8 @@ import uuid
 import os
 import json
 from datetime import datetime
-import sqlite3
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import shutil
 from fastapi.staticfiles import StaticFiles
 from fastapi import UploadFile, File
@@ -27,29 +28,38 @@ load_dotenv()
 # ==========================================
 # 0. DATABASE INITIALIZATION
 # ==========================================
-DB_PATH = "database/dispatch_v2.db"
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+def get_db_connection():
+    # Use sslmode=require for Supabase
+    return psycopg2.connect(DATABASE_URL, sslmode='require')
 
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS incidents (
-            id TEXT,
-            incident_type TEXT,
-            description TEXT,
-            latitude REAL,
-            longitude REAL,
-            media_url TEXT,
-            assigned_agency TEXT,
-            assigned_station_name TEXT,
-            status TEXT,
-            timestamp TEXT,
-            triage_json TEXT,
-            dispatch_json TEXT
-        )
-    ''')
-    conn.commit()
-    conn.close()
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS incidents (
+                id TEXT PRIMARY KEY,
+                incident_type TEXT,
+                description TEXT,
+                latitude DOUBLE PRECISION,
+                longitude DOUBLE PRECISION,
+                media_url TEXT,
+                assigned_agency TEXT,
+                assigned_station_name TEXT,
+                status TEXT,
+                timestamp TEXT,
+                triage_json TEXT,
+                dispatch_json TEXT
+            )
+        ''')
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print("Database initialized successfully.")
+    except Exception as e:
+        print(f"Error initializing database: {e}")
 
 init_db()
 
@@ -455,7 +465,7 @@ async def triage_and_dispatch(request: EmergencyRequest):
         
         # --- SAVE TO DATABASE ---
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = get_db_connection()
             cursor = conn.cursor()
             
             # We save the incident for each agency dispatched
@@ -472,7 +482,8 @@ async def triage_and_dispatch(request: EmergencyRequest):
                     print(f"Saving incident {response_payload['id']} for {agency_type} at {station_name}")
                     cursor.execute('''
                         INSERT INTO incidents (id, incident_type, description, latitude, longitude, media_url, assigned_agency, assigned_station_name, status, timestamp, triage_json, dispatch_json)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (id) DO NOTHING
                     ''', (
                         response_payload["id"],
                         response_payload["triage_analysis"]["crisis_category"],
@@ -489,6 +500,7 @@ async def triage_and_dispatch(request: EmergencyRequest):
                     ))
             
             conn.commit()
+            cursor.close()
             conn.close()
         except Exception as e:
             print(f"Error saving to DB: {e}")
@@ -545,11 +557,11 @@ async def login(request: LoginRequest):
 @app.get("/api/v1/incidents/{station_name}")
 async def get_station_incidents(station_name: str):
     try:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM incidents WHERE UPPER(assigned_station_name) = UPPER(?) ORDER BY timestamp DESC', (station_name,))
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute('SELECT * FROM incidents WHERE UPPER(assigned_station_name) = UPPER(%s) ORDER BY timestamp DESC', (station_name,))
         rows = cursor.fetchall()
+        cursor.close()
         conn.close()
         
         incidents = []
@@ -574,17 +586,18 @@ async def get_station_incidents(station_name: str):
 @app.post("/api/v1/incidents/{incident_id}/resolve")
 async def resolve_incident(incident_id: str, station_name: str):
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('UPDATE incidents SET status = "RESOLVED" WHERE id = ?', (incident_id,))
+        cursor.execute('UPDATE incidents SET status = %s WHERE id = %s', ("RESOLVED", incident_id))
         conn.commit()
+        cursor.close()
         conn.close()
         return {"status": "success", "message": f"Incident {incident_id} resolved"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/v1/upload")
-async def upload_media(file: UploadFile = File(...)):
+async def upload_media(request: Request, file: UploadFile = File(...)):
     try:
         ext = os.path.splitext(file.filename)[1]
         file_id = str(uuid.uuid4())[:8]
@@ -594,7 +607,8 @@ async def upload_media(file: UploadFile = File(...)):
         with open(filepath, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
             
-        return {"media_url": f"http://127.0.0.1:8000/uploads/{filename}"}
+        base_url = str(request.base_url).rstrip('/')
+        return {"media_url": f"{base_url}/uploads/{filename}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 @app.get("/")
@@ -621,11 +635,11 @@ def get_incidents():
 @app.get("/api/v1/all_incidents")
 async def get_all_incidents():
     try:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         cursor.execute('SELECT * FROM incidents ORDER BY timestamp DESC')
         rows = cursor.fetchall()
+        cursor.close()
         conn.close()
         
         incidents = []
