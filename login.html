@@ -179,10 +179,10 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    // Save to localStorage
                     localStorage.setItem('responder_station', data.station_name);
                     localStorage.setItem('responder_agency', data.agency_type);
-                    // Redirect to dashboard
+                    localStorage.setItem('responder_lat', data.latitude);
+                    localStorage.setItem('responder_lon', data.longitude);
                     window.location.href = 'dashboard.html';
                 } else {
                     errorMsg.innerText = data.detail || "Login failed. Please check station name.";

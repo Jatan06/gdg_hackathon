@@ -9,6 +9,9 @@
   <!-- Leaflet.js -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <!-- jsPDF for Reports -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <!-- Shared Styles -->
   <link rel="stylesheet" href="styles.css">
@@ -232,6 +235,61 @@
     .stat-val.orange { color: var(--accent-orange); }
     .stat-val.blue  { color: var(--accent-blue); }
     .stat-val.green { color: var(--accent-green); }
+    
+    .feed-scroll.hide-archive .inc-card.resolved {
+      display: none !important;
+    }
+    .inc-card.resolved {
+      opacity: 0.6;
+      background: rgba(255, 255, 255, 0.02);
+      filter: grayscale(0.5);
+    }
+
+    /* Resolve Button */
+    .resolve-btn {
+      width: 100%;
+      padding: 14px;
+      background: #16a34a;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 800;
+      font-size: 0.9rem;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+      font-family: 'Inter', sans-serif;
+    }
+    .resolve-btn:hover {
+      background: #15803d;
+      transform: translateY(-2px);
+    }
+    
+    #archiveToggle {
+      padding: 12px;
+      text-align: left;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.05);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+    #archiveToggle:hover { background: rgba(255, 255, 255, 0.08); color: var(--text-primary); }
+    #archiveToggle .chevron { 
+      font-size: 1rem; 
+      transition: transform 0.3s; 
+      transform: rotate(0deg); 
+      color: var(--text-muted);
+    }
+    .feed-scroll.hide-archive #archiveToggle .chevron { transform: rotate(90deg); }
+    #archiveToggle:hover .chevron { color: var(--text-primary); }
 
     .stat-lbl {
       font-size: 0.6rem;
@@ -284,6 +342,33 @@
     }
 
     .detail-close:hover { background: var(--bg-primary); }
+
+    /* PDF Buttons */
+    .pdf-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      margin-left: 15px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-family: 'Inter', sans-serif;
+    }
+    .pdf-btn:hover { background: rgba(255,255,255,0.1); border-color: var(--text-muted); }
+
+    .inc-card .inc-id { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); }
+    .inc-card .inc-time, 
+    .inc-card .inc-category,
+    .inc-card .inc-arrival,
+    .inc-card .inc-summary { font-family: 'Inter', sans-serif; }
 
     .detail-grid {
       display: grid;
@@ -391,13 +476,16 @@
 <header class="topbar">
   <div class="topbar-brand">
     <div class="pulse-dot"></div>
-    <span>Crisis Dispatch</span>
-    <span style="font-size:0.6rem;font-weight:500;color:var(--text-muted);border:1px solid var(--border-color);padding:2px 8px;border-radius:20px;margin-left:4px;letter-spacing:1px;">COMMAND</span>
+    <span id="stationDisplay" style="color:var(--text-primary); font-weight:900; letter-spacing:1px; margin-right:10px;">● LOADING...</span>
+    <span id="agencyBadge" class="unit-pill">...</span>
+    <button class="pdf-btn" onclick="downloadAllReportsPDF()">
+      📄 DOWNLOAD ALL REPORTS
+    </button>
   </div>
   <div style="display:flex;align-items:center;gap:16px;">
     <div class="topbar-status">
       <div class="dot"></div>
-      <span id="lastRefreshed">Connecting...</span>
+      <span id="lastRefreshed">Live</span>
     </div>
     <a href="heatmap.html" target="_blank" class="nav-link">🗺️ View Global Heatmap</a>
   </div>
@@ -416,6 +504,10 @@
       </div>
     </div>
     <div class="feed-scroll" id="feedScroll">
+      <div id="archiveToggle" onclick="document.getElementById('feedScroll').classList.toggle('hide-archive')">
+        <span>ARCHIVED INCIDENTS</span>
+        <span class="chevron">▼</span>
+      </div>
       <div class="feed-empty" id="feedEmpty">
         <div class="icon">📡</div>
         <p>Waiting for incoming incidents.</p>
@@ -466,7 +558,6 @@
 </main>
 
 <script>
-  // ── AUTH CHECK ──
   const stationName = localStorage.getItem('responder_station');
   const agencyType = localStorage.getItem('responder_agency');
 
@@ -476,10 +567,10 @@
 
   // Update UI with station name
   document.addEventListener('DOMContentLoaded', () => {
-      const brand = document.querySelector('.topbar-brand span:nth-child(2)');
-      if (brand) brand.textContent = `Dispatch: ${stationName}`;
-      const cmdBadge = document.querySelector('.topbar-brand span:nth-child(3)');
-      if (cmdBadge) cmdBadge.textContent = agencyType ? agencyType.toUpperCase() : 'COMMAND';
+      document.getElementById('stationDisplay').textContent = `Dispatch: ${stationName}`;
+      const badge = document.getElementById('agencyBadge');
+      badge.textContent = agencyType || 'COMMAND';
+      badge.className = `unit-pill ${agencyType ? agencyType.toLowerCase() : ''}`;
   });
 
   const INCIDENTS_URL = `http://127.0.0.1:8000/api/v1/incidents/${encodeURIComponent(stationName)}`;
@@ -488,7 +579,8 @@
   let dashMap, markersGroup;
   let incidents = [];
   let activeId = null;
-  let incidentMarkers = {}; // id -> [markers]
+  let showResolved = localStorage.getItem('dash_show_resolved') === 'true';
+  let incidentMarkers = {};
 
   const severityEmoji = {
     CRITICAL: '🔴', MASS_CASUALTY: '☢️', HIGH: '🟠', MODERATE: '🟡', LOW: '🟢'
@@ -501,11 +593,14 @@
 
   // ── MAP ──
   function initMap() {
+    const responderLat = parseFloat(localStorage.getItem('responder_lat')) || 23.0225;
+    const responderLon = parseFloat(localStorage.getItem('responder_lon')) || 72.5714;
+    const homeLatLng = [responderLat, responderLon];
+
     dashMap = L.map('dash-map', {
-      center: [19.076, 72.8777],
-      zoom: 11,
-      zoomControl: false,
-      attributionControl: false
+      center: homeLatLng,
+      zoom: 13,
+      zoomControl: false
     });
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -513,6 +608,15 @@
     }).addTo(dashMap);
 
     L.control.zoom({ position: 'topright' }).addTo(dashMap);
+    
+    // Add Home Station Marker
+    const colorMap = { 'Hospital': '#ef4444', 'Fire': '#f97316', 'Police': '#3b82f6' };
+    const emojiMap = { 'Hospital': '🏥', 'Fire': '🚒', 'Police': '🚓' };
+    
+    L.marker(homeLatLng, { icon: makeIcon(emojiMap[agencyType] || '📍', colorMap[agencyType] || '#64748b', true) })
+      .addTo(dashMap)
+      .bindPopup(`<b>HOME STATION</b><br>${stationName}`);
+
     L.control.attribution({ position: 'bottomright', prefix: false })
       .addAttribution('&copy; <a href="https://www.openstreetmap.org/">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>')
       .addTo(dashMap);
@@ -541,15 +645,12 @@
       const res = await fetch(INCIDENTS_URL);
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
-      const fresh = data || []; // It now returns a direct array
-      if (fresh.length !== incidents.length) {
-        incidents = fresh;
-        renderFeed();
-        renderMapMarkers();
-        updateStats();
-      }
-      document.getElementById('lastRefreshed').textContent =
-        'Live — updated ' + new Date().toLocaleTimeString();
+      incidents = data || [];
+      
+      renderFeed();
+      renderMapMarkers();
+      updateStats();
+      document.getElementById('lastRefreshed').textContent = `Live — updated ${new Date().toLocaleTimeString()}`;
     } catch (e) {
       document.getElementById('lastRefreshed').textContent = '⚠️ Cannot reach API';
     }
@@ -557,75 +658,113 @@
 
   // ── STATS ──
   function updateStats() {
-    const t = incidents;
-    document.getElementById('statTotal').textContent = t.length;
+    const total = incidents.length;
+    document.getElementById('statTotal').textContent = total;
     document.getElementById('statCritical').textContent =
-      t.filter(i => ['CRITICAL','MASS_CASUALTY'].includes(i.triage_analysis?.severity_level)).length;
+      incidents.filter(i => i.triage_analysis?.severity_level === 'CRITICAL' || i.triage_analysis?.severity_level === 'MASS_CASUALTY').length;
     document.getElementById('statHigh').textContent =
-      t.filter(i => i.triage_analysis?.severity_level === 'HIGH').length;
+      incidents.filter(i => i.triage_analysis?.severity_level === 'HIGH').length;
     document.getElementById('statMedical').textContent =
-      t.filter(i => i.dispatched_units?.medical && i.dispatched_units.medical.status !== 'Not Required').length;
+      incidents.filter(i => i.triage_analysis?.crisis_category === 'MEDICAL').length;
     document.getElementById('statFire').textContent =
-      t.filter(i => i.dispatched_units?.fire && i.dispatched_units.fire.status !== 'Not Required').length;
+      incidents.filter(i => i.triage_analysis?.crisis_category === 'FIRE').length;
     document.getElementById('statPolice').textContent =
-      t.filter(i => i.dispatched_units?.police && i.dispatched_units.police.status !== 'Not Required').length;
+      incidents.filter(i => i.triage_analysis?.crisis_category === 'SECURITY').length;
   }
 
   // ── FEED ──
   function renderFeed() {
     const scroll = document.getElementById('feedScroll');
     const empty = document.getElementById('feedEmpty');
-    document.getElementById('incCount').textContent = incidents.length;
+    const active = incidents.filter(i => i.status !== 'RESOLVED');
+    const resolved = incidents.filter(i => i.status === 'RESOLVED');
+    
+    document.getElementById('incCount').textContent = active.length;
 
     if (incidents.length === 0) {
       empty.style.display = 'flex';
-      // remove old cards
-      [...scroll.querySelectorAll('.inc-card')].forEach(el => el.remove());
+      scroll.innerHTML = '';
       return;
     }
     empty.style.display = 'none';
 
-    // build from newest
-    const sorted = [...incidents].reverse();
-    const existing = new Set([...scroll.querySelectorAll('.inc-card')].map(el => el.dataset.id));
-
-    sorted.forEach(inc => {
-      if (existing.has(inc.id)) return; // already rendered
-      const t = inc.triage_analysis || {};
-      const u = inc.dispatched_units || {};
-      const sev = t.severity_level || 'LOW';
-      const cat = t.crisis_category || 'UNKNOWN';
-      const time = inc.timestamp ? new Date(inc.timestamp).toLocaleTimeString() : '';
-
-      const activeUnits = [];
-      if (u.medical && u.medical.status !== 'Not Required') activeUnits.push('medical');
-      if (u.fire    && u.fire.status    !== 'Not Required') activeUnits.push('fire');
-      if (u.police  && u.police.status  !== 'Not Required') activeUnits.push('police');
-
-      const unitPills = activeUnits.map(type =>
-        `<span class="unit-pill ${type}">${type}</span>`).join('');
-
-      const card = document.createElement('div');
-      card.className = `inc-card ${sev}`;
-      card.dataset.id = inc.id;
-      card.innerHTML = `
-        <div class="inc-top">
-          <span class="inc-id">${inc.id}</span>
-          <span class="inc-time">${time}</span>
-        </div>
-        <div class="inc-row">
-          <span class="inc-category">
-            ${categoryEmoji[cat] || '⚠️'} ${cat}
-            &nbsp;<span class="severity-badge severity-${sev}">${sev}</span>
-          </span>
-          <div class="inc-units">${unitPills}</div>
-        </div>
-        <div class="inc-summary">${t.tts_summary || 'No summary available.'}</div>`;
-      card.addEventListener('click', () => selectIncident(inc.id));
-
-      // prepend so newest is on top
-      scroll.insertBefore(card, scroll.firstChild);
+    active.forEach((inc, index) => {
+      renderCard(inc, scroll, index);
     });
+
+    let toggle = document.getElementById('archiveToggle');
+    if (resolved.length > 0) {
+      if (!toggle) {
+        toggle = document.createElement('div');
+        toggle.id = 'archiveToggle';
+      }
+      if (active.length === 0) empty.style.display = 'none';
+      scroll.appendChild(toggle);
+      
+      const isHidden = scroll.classList.contains('hide-archive');
+      toggle.innerHTML = `<span>HISTORY / RESOLVED (${resolved.length})</span><span class="chevron">▼</span>`;
+      toggle.onclick = (e) => {
+        e.stopPropagation();
+        const nowHidden = scroll.classList.toggle('hide-archive');
+        showResolved = !nowHidden;
+        localStorage.setItem('dash_show_resolved', showResolved);
+        renderMapMarkers();
+      };
+    } else if (toggle) {
+      toggle.remove();
+    }
+
+    resolved.forEach(inc => {
+      renderCard(inc, scroll);
+    });
+  }
+
+  function renderCard(inc, scroll, index = null) {
+    const t = inc.triage_analysis || {};
+    const u = inc.dispatched_units || {};
+    const cat = t.crisis_category || 'UNKNOWN';
+    const sev = t.severity_level || 'LOW';
+    const time = inc.timestamp ? new Date(inc.timestamp).toLocaleTimeString() : '';
+    const isResolved = inc.status === 'RESOLVED';
+
+    let card = scroll.querySelector(`[data-id="${inc.id}"]`);
+    if (!card) {
+      card = document.createElement('div');
+      card.dataset.id = inc.id;
+      card.addEventListener('click', () => selectIncident(inc.id));
+    }
+    
+    if (index !== null && scroll.children[index] !== card) {
+        scroll.insertBefore(card, scroll.children[index]);
+    } else if (index === null) {
+        scroll.appendChild(card);
+    }
+
+    const agencyToUnit = { 'Hospital': 'medical', 'Fire': 'fire', 'Police': 'police' };
+    const myUnit = u[agencyToUnit[agencyType]];
+    const etaMinutes = myUnit ? (myUnit.estimated_eta_minutes || 0) : 0;
+    const arrivalTime = inc.timestamp ? new Date(new Date(inc.timestamp).getTime() + etaMinutes * 60000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '—';
+    const activeUnits = [];
+    if (u.medical && u.medical.status !== 'Not Required') activeUnits.push('medical');
+    if (u.fire    && u.fire.status    !== 'Not Required') activeUnits.push('fire');
+    if (u.police  && u.police.status  !== 'Not Required') activeUnits.push('police');
+    const unitPills = activeUnits.map(type => `<span class="unit-pill ${type}">${type}</span>`).join('');
+
+    card.className = `inc-card ${sev} ${isResolved ? 'resolved' : ''} ${activeId === inc.id ? 'active' : ''}`;
+    card.innerHTML = `
+      <div class="inc-top">
+        <span class="inc-id">${inc.id} ${isResolved ? '✅' : ''}</span>
+        <span class="inc-time">${time}</span>
+      </div>
+      <div class="inc-row">
+        <span class="inc-category">
+          ${categoryEmoji[cat] || '⚠️'} ${cat}
+          &nbsp;<span class="severity-badge severity-${sev}">${sev}</span>
+        </span>
+        <div class="inc-units">${unitPills}</div>
+      </div>
+      <div class="inc-arrival">Arrival: <span style="color:var(--accent-green)">${arrivalTime}</span></div>
+      <div class="inc-summary">${t.tts_summary || 'No summary available.'}</div>`;
   }
 
   // ── MAP MARKERS ──
@@ -633,11 +772,12 @@
     markersGroup.clearLayers();
     incidentMarkers = {};
 
-    incidents.forEach(inc => {
+    const toShow = showResolved ? incidents : incidents.filter(i => i.status !== 'RESOLVED');
+
+    toShow.forEach(inc => {
       const t = inc.triage_analysis || {};
       const u = inc.dispatched_units || {};
 
-      // Prefer user_location (actual GPS from form), fall back to LLM-extracted location
       const userLoc = inc.user_location || {};
       const llmLoc  = t.location || {};
       const lat = userLoc.latitude  || llmLoc.latitude;
@@ -651,7 +791,6 @@
 
       const markers = [];
 
-      // Incident epicenter
       const epicenter = L.marker([lat, lon], { icon: makeIcon(catEmoji, sevColor[sev] || '#64748b') })
         .bindPopup(`<strong>${inc.id}</strong><br>${cat} — ${sev}<br>${t.tts_summary || ''}`);
       markersGroup.addLayer(epicenter);
@@ -660,15 +799,12 @@
       const colorMap = { medical: '#ef4444', fire: '#f97316', police: '#3b82f6' };
       const emojiMap = { medical: '🏥', fire: '🚒', police: '🚓' };
 
-      // Agency filtering logic
       const agencyToUnit = { 'Hospital': 'medical', 'Fire': 'fire', 'Police': 'police' };
       const myUnitType = agencyToUnit[agencyType];
 
       ['medical', 'fire', 'police'].forEach(type => {
         const unit = u[type];
         if (!unit || unit.status === 'Not Required') return;
-        
-        // ONLY render the unit if it matches the dashboard's agency
         if (type !== myUnitType) return;
 
         const uLat = unit.latitude, uLon = unit.longitude;
@@ -680,7 +816,6 @@
         markersGroup.addLayer(uMarker);
         markers.push(uMarker);
 
-        // Route line
         const line = L.polyline([[lat, lon], [uLat, uLon]], {
           color: colorMap[type], weight: 1.5, opacity: 0.5, dashArray: '6 6'
         });
@@ -691,7 +826,6 @@
       incidentMarkers[inc.id] = { lat, lon, markers, epicenter };
     });
 
-    // Fit map to all markers if any
     if (Object.keys(incidentMarkers).length > 0) {
       const allLatLngs = [];
       Object.values(incidentMarkers).forEach(info => allLatLngs.push([info.lat, info.lon]));
@@ -701,9 +835,10 @@
 
   // ── SELECTION ──
   function selectIncident(id) {
+    if (!id) return;
     activeId = id;
-
-    // Highlight card
+    
+    // Highlight card visually
     document.querySelectorAll('.inc-card').forEach(el => {
       el.classList.toggle('active', el.dataset.id === id);
     });
@@ -711,32 +846,62 @@
     const inc = incidents.find(i => i.id === id);
     if (!inc) return;
 
-    // Fly to incident
-    const info = incidentMarkers[id];
-    if (info) {
-      dashMap.flyTo([info.lat, info.lon], 14, { duration: 0.8 });
-      info.epicenter.openPopup();
+    // FLY TO LOCATION (Work for all incidents, including history)
+    const t = inc.triage_analysis || {};
+    const loc = inc.user_location || t.location || {};
+    const lat = loc.latitude, lon = loc.longitude;
+    
+    if (lat && lon && dashMap) {
+      dashMap.flyTo([lat, lon], 14, { duration: 0.8 });
     }
 
-    // Show detail drawer
     renderDetail(inc);
   }
 
+  function buildUnitCard(type, unit) {
+    if (!unit) return '';
+    const isNotReq = unit.status === 'Not Required';
+    const unitName = unit.hospital_name || unit.unit_name || unit.name || 'Unknown';
+    
+    return `
+      <div class="unit-card ${type} ${isNotReq ? 'not-required' : ''}">
+        <div class="unit-header" style="display:flex; align-items:center; gap:10px;">
+          <div class="unit-icon-mini">${type === 'medical' ? '🏥' : type === 'fire' ? '🚒' : '🚓'}</div>
+          <div>
+            <div class="unit-name-mini">Dispatch: ${unitName}</div>
+            <div class="unit-type-mini">${type.toUpperCase()}</div>
+          </div>
+        </div>
+        ${isNotReq ? '' : `
+        <div class="unit-meta" style="display:flex; justify-content:space-between; margin-top:10px;">
+          <div class="unit-meta-item">
+            <div class="label" style="font-size:0.6rem; color:var(--text-muted);">Distance</div>
+            <div class="value" style="font-size:0.8rem; font-weight:700;">${unit.distance_km || '—'} km</div>
+          </div>
+          <div class="unit-meta-item">
+            <div class="label" style="font-size:0.6rem; color:var(--text-muted);">ETA</div>
+            <div class="value" style="font-size:0.8rem; font-weight:700; color:var(--accent-red)">${unit.estimated_eta_minutes || 0} min</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <div class="label" style="font-size:0.6rem; color:var(--text-muted);">AI Reasoning</div>
+          <div class="value" style="font-size:0.7rem; line-height:1.3; opacity:0.8;">${unit.ai_reasoning || '—'}</div>
+        </div>
+        `}
+      </div>
+    `;
+  }
+
   function renderDetail(inc) {
+    if (!inc) return;
     const t = inc.triage_analysis || {};
     const u = inc.dispatched_units || {};
     const loc = t.location || {};
+    const sev = t.severity_level || 'LOW';
 
-    const buildUnitCard = (type, unit) => {
-      if (!unit || unit.status === 'Not Required') return '';
-      const name = unit.unit_name || unit.hospital_name || '—';
-      const emojiMap = { medical: '🏥', fire: '🚒', police: '🚓' };
-      return `<div class="detail-unit-card ${type}">
-        <div class="u-label">${emojiMap[type]} ${type}</div>
-        <div class="u-name">${name}</div>
-        <div class="u-dist">${unit.distance_km} km away</div>
-      </div>`;
-    };
+    const agencyToUnit = { 'Hospital': 'medical', 'Fire': 'fire', 'Police': 'police' };
+    const myUnitType = agencyToUnit[agencyType];
+    const myUnit = u[myUnitType];
 
     let mediaHtml = '';
     if (inc.media_url) {
@@ -747,12 +912,26 @@
         }
     }
 
-    const agencyToUnit = { 'Hospital': 'medical', 'Fire': 'fire', 'Police': 'police' };
-    const myUnitType = agencyToUnit[agencyType];
+    let resolveHtml = '';
+    if (inc.status === 'RESOLVED') {
+      resolveHtml = '<div style="text-align:center; color:var(--accent-green); margin-top:15px; font-weight:700;">✅ RESOLVED</div>';
+    } else {
+      const now = new Date();
+      const reportTime = new Date(inc.timestamp || Date.now());
+      const etaMins = myUnit ? (myUnit.estimated_eta_minutes || 0) : 0;
+      const arrivalTime = new Date(reportTime.getTime() + etaMins * 60000);
+      
+      if (now >= arrivalTime || etaMins === 0) {
+        resolveHtml = `<button class="resolve-btn" onclick="resolveIncident('${inc.id}')">MARK AS RESOLVED</button>`;
+      } else {
+        const diffMins = Math.ceil((arrivalTime - now) / 60000);
+        resolveHtml = `<div style="text-align:center; padding:12px; margin-top:15px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px dashed var(--border-color); color:var(--text-muted); font-size:0.85rem;">Unit en route. Arriving in ~${diffMins} min</div>`;
+      }
+    }
 
     document.getElementById('detailInner').innerHTML = `
       <div class="detail-row">
-        <div class="detail-title">${inc.id} &nbsp; <span class="severity-badge severity-${t.severity_level}">${t.severity_level}</span></div>
+        <div class="detail-title">${inc.id} &nbsp; <span class="severity-badge severity-${sev}">${sev}</span></div>
         <button class="detail-close" onclick="closeDetail()">✕ Close</button>
       </div>
       <div class="detail-grid">
@@ -768,17 +947,66 @@
           <div class="label">Est. Victims</div>
           <div class="value">${t.estimated_victims ?? '—'}</div>
         </div>
-        <div class="detail-cell">
-          <div class="label">Location</div>
-          <div class="value" style="font-size:0.7rem">${loc.venue_specifics || `${(loc.latitude||0).toFixed(4)}, ${(loc.longitude||0).toFixed(4)}`}</div>
-        </div>
       </div>
       ${mediaHtml}
       <div class="detail-units" style="margin-top:15px;">
-        ${buildUnitCard(myUnitType, u[myUnitType])}
-      </div>`;
-
+        ${buildUnitCard(myUnitType, myUnit)}
+      </div>
+      ${resolveHtml}
+    `;
     document.getElementById('detailDrawer').classList.add('open');
+  }
+
+  async function resolveIncident(id) {
+    if (!confirm('Mark this incident as resolved?')) return;
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/api/v1/incidents/${id}/resolve?station_name=${encodeURIComponent(stationName)}`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        await fetchIncidents();
+        closeDetail();
+        const homeLat = parseFloat(localStorage.getItem('station_lat')) || 19.076;
+        const homeLon = parseFloat(localStorage.getItem('station_lon')) || 72.8777;
+        if (dashMap) dashMap.flyTo([homeLat, homeLon], 13, { duration: 1.5 });
+      }
+    } catch (e) {
+      alert('Failed to resolve incident');
+    }
+  }
+
+  function downloadAllReportsPDF() {
+    if (incidents.length === 0) return alert('No incidents to report.');
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const agencyToUnit = { 'Hospital': 'medical', 'Fire': 'fire', 'Police': 'police' };
+    const unitType = agencyToUnit[agencyType];
+
+    incidents.forEach((inc, index) => {
+      if (index > 0) doc.addPage();
+      const t = inc.triage_analysis || {};
+      const u = inc.dispatched_units || {};
+      doc.setFont("helvetica", "bold").setFontSize(22).setTextColor(220, 38, 38).text("EMERGENCY INCIDENT REPORT", 105, 20, { align: "center" });
+      doc.setDrawColor(200, 200, 200).line(20, 25, 190, 25);
+      doc.setFontSize(12).setTextColor(0, 0, 0).text(`Incident ID: ${inc.id}`, 20, 35);
+      doc.text(`Report Time: ${new Date(inc.timestamp).toLocaleString()}`, 20, 42);
+      doc.text(`Status: ${inc.status}`, 20, 49);
+      doc.setFontSize(14).text("TRIAGE ANALYSIS", 20, 60);
+      doc.setFont("helvetica", "normal").setFontSize(11).text(`Category: ${t.crisis_category}`, 20, 67);
+      doc.text(`Severity: ${t.severity_level}`, 20, 74);
+      const summaryLines = doc.splitTextToSize(`Summary: ${t.tts_summary}`, 170);
+      doc.text(summaryLines, 20, 81);
+      let currentY = 81 + (summaryLines.length * 5) + 10;
+      doc.setFont("helvetica", "bold").setFontSize(14).text("DISPATCH DETAILS", 20, currentY);
+      doc.setFont("helvetica", "normal").setFontSize(11);
+      const unit = u[unitType];
+      if (unit) {
+        const unitName = unit.hospital_name || unit.unit_name || unit.name || 'Unknown';
+        doc.text(`Responding Unit: ${unitName} (${agencyType})`, 20, currentY + 7);
+        doc.text(`Distance: ${unit.distance_km} km`, 20, currentY + 14);
+      }
+    });
+    doc.save(`${stationName.replace(/\s+/g, '_')}_Master_Log.pdf`);
   }
 
   function closeDetail() {
@@ -787,11 +1015,15 @@
     activeId = null;
   }
 
-  // ── BOOT ──
   document.addEventListener('DOMContentLoaded', () => {
     initMap();
     fetchIncidents();
     setInterval(fetchIncidents, POLL_MS);
+    
+    const scroll = document.getElementById('feedScroll');
+    if (scroll && localStorage.getItem('dash_show_resolved') !== 'true') {
+        scroll.classList.add('hide-archive');
+    }
   });
 </script>
 </body>
