@@ -14,7 +14,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <!-- Shared Styles -->
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="/static/styles.css">
 
   <style>
     /* ── Dashboard-specific overrides ── */
@@ -487,7 +487,7 @@
       <div class="dot"></div>
       <span id="lastRefreshed">Live</span>
     </div>
-    <a href="heatmap.html" target="_blank" class="nav-link">🗺️ View Global Heatmap</a>
+    <a href="/heatmap" target="_blank" class="nav-link">🗺️ View Global Heatmap</a>
   </div>
 </header>
 
@@ -562,7 +562,7 @@
   const agencyType = localStorage.getItem('responder_agency');
 
   if (!stationName) {
-      window.location.href = 'login.html';
+      window.location.href = '/login';
   }
 
   // Update UI with station name
@@ -573,7 +573,7 @@
       badge.className = `unit-pill ${agencyType ? agencyType.toLowerCase() : ''}`;
   });
 
-  const INCIDENTS_URL = `http://127.0.0.1:8000/api/v1/incidents/${encodeURIComponent(stationName)}`;
+  const INCIDENTS_URL = `/api/v1/incidents/${encodeURIComponent(stationName)}`;
   const POLL_MS = 5000;
 
   let dashMap, markersGroup;
@@ -960,7 +960,7 @@
   async function resolveIncident(id) {
     if (!confirm('Mark this incident as resolved?')) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/v1/incidents/${id}/resolve?station_name=${encodeURIComponent(stationName)}`, {
+      const res = await fetch(`/api/v1/incidents/${id}/resolve?station_name=${encodeURIComponent(stationName)}`, {
         method: 'POST'
       });
       if (res.ok) {

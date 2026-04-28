@@ -14,7 +14,7 @@
   <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 
   <!-- Shared Styles -->
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="/static/styles.css">
 
   <style>
     body {
@@ -154,7 +154,7 @@
 
   async function fetchAndRenderHeatmap() {
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/v1/all_incidents');
+      const res = await fetch('/api/v1/all_incidents');
       if (!res.ok) throw new Error('Failed to fetch');
       
       const incidents = await res.json();

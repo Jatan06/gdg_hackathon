@@ -798,8 +798,3 @@ body {
 .leaflet-popup-tip {
   background: var(--bg-secondary) !important;
 }
-
-.leaflet-popup-content {
-  font-family: 'Inter', sans-serif !important;
-  font-size: 0.8rem !important;
-}

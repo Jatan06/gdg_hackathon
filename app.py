@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Literal
@@ -26,7 +27,7 @@ load_dotenv()
 # ==========================================
 # 0. DATABASE INITIALIZATION
 # ==========================================
-DB_PATH = "dispatch_v2.db"
+DB_PATH = "database/dispatch_v2.db"
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -61,7 +62,7 @@ incident_history = []
 
 # --- LOAD HOSPITALS ---
 try:
-    df_hospitals = pd.read_csv("hospital_directory_cleaned.csv", low_memory=False)
+    df_hospitals = pd.read_csv("data/hospital_directory_cleaned.csv", low_memory=False)
     df_hospitals = df_hospitals.rename(columns={"Hospital_Name": "name"})
     # Ensure capabilities column exists or merge from specialties/facilities
     if 'capabilities' not in df_hospitals.columns:
@@ -81,7 +82,7 @@ except Exception as e:
 
 # --- LOAD FIRE STATIONS ---
 try:
-    df_fire = pd.read_csv("OpenStreetMap_-_Fire_Station.csv")
+    df_fire = pd.read_csv("data/OpenStreetMap_-_Fire_Station.csv")
     # OSM CSV has latitude and longitude swapped or just needs naming? 
     # Let's check the first line again: latitude,longitude,osm_id,name...
     # But wait, looking at the data: 78.53, 21.59 ... 78 is longitude for India. 
@@ -110,7 +111,7 @@ except Exception as e:
 
 # --- LOAD POLICE STATIONS ---
 try:
-    df_police = pd.read_csv("INDIA_POLICE_STATIONS.csv")
+    df_police = pd.read_csv("data/INDIA_POLICE_STATIONS.csv")
     df_police['latitude'] = pd.to_numeric(df_police['latitude'], errors='coerce')
     df_police['longitude'] = pd.to_numeric(df_police['longitude'], errors='coerce')
     df_police = df_police.dropna(subset=['latitude', 'longitude'])
@@ -331,6 +332,7 @@ if not os.path.exists(UPLOAD_DIR):
 
 app = FastAPI(title="Hospitality Triage & Dispatch API", version="1.0")
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
@@ -596,8 +598,20 @@ async def upload_media(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 @app.get("/")
-def health_check():
-    return {"status": "Active", "message": "API is running. Send POST to /api/v1/triage"}
+def get_index():
+    return FileResponse("templates/index.html")
+
+@app.get("/login")
+def get_login():
+    return FileResponse("templates/login.html")
+
+@app.get("/dashboard")
+def get_dashboard():
+    return FileResponse("templates/dashboard.html")
+
+@app.get("/heatmap")
+def get_heatmap():
+    return FileResponse("templates/heatmap.html")
 
 @app.get("/api/v1/incidents")
 def get_incidents():

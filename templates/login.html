@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Responder Login | Emergency Dispatch</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="/static/styles.css">
     <style>
         body {
             background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
@@ -41,6 +41,7 @@
             margin-bottom: 30px;
             background: linear-gradient(45deg, #ff3e3e, #ff8e53);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             letter-spacing: -1px;
         }
@@ -71,8 +72,8 @@
         }
 
         select {
-            appearance: none;
             -webkit-appearance: none;
+            appearance: none;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
             background-repeat: no-repeat;
             background-position: right 15px center;
@@ -170,7 +171,7 @@
             }
 
             try {
-                const response = await fetch('http://localhost:8000/api/v1/login', {
+                const response = await fetch('/api/v1/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ agency_type: agencyType, station_name: stationName })
@@ -183,7 +184,7 @@
                     localStorage.setItem('responder_agency', data.agency_type);
                     localStorage.setItem('responder_lat', data.latitude);
                     localStorage.setItem('responder_lon', data.longitude);
-                    window.location.href = 'dashboard.html';
+                    window.location.href = '/dashboard';
                 } else {
                     errorMsg.innerText = data.detail || "Login failed. Please check station name.";
                     errorMsg.style.display = 'block';
