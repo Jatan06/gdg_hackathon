@@ -484,7 +484,7 @@ async def triage_and_dispatch(request: EmergencyRequest):
                     cursor.execute('''
                         INSERT INTO incidents (id, incident_type, description, latitude, longitude, media_url, assigned_agency, assigned_station_name, status, timestamp, triage_json, dispatch_json)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (id, assigned_station_name) DO NOTHING
+                        ON CONFLICT ("id", "assigned_station_name") DO NOTHING
                     ''', (
                         response_payload["id"],
                         response_payload["triage_analysis"]["crisis_category"],
