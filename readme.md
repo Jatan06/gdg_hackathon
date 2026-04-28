@@ -179,37 +179,100 @@ graph TD
 
 ### Prerequisites
 
-- Python 3.10+
-- A [Groq API Key](https://console.groq.com) (free tier is sufficient)
+| Requirement | Details |
+|:------------|:--------|
+| **Python** | Version 3.10 or higher |
+| **pip** | Comes bundled with Python |
+| **Groq API Key** | Free tier available at [console.groq.com](https://console.groq.com) |
+| **Git** | For cloning the repository |
 
-### 1 — Clone and Install
+### 1 — Clone the Repository
 
 ```bash
 git clone https://github.com/taher51-lang/crisis-dispatch.git
 cd crisis-dispatch
+```
+
+### 2 — Create a Virtual Environment
+
+```bash
+# Create virtual environment
+python -m venv venv
+
+# Activate it
+# macOS / Linux:
+source venv/bin/activate
+
+# Windows:
+venv\Scripts\activate
+```
+
+### 3 — Install Dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
-### 2 — Configure Environment
+This installs the following key packages:
+
+| Package | Purpose |
+|:--------|:--------|
+| `fastapi` + `uvicorn` | Async web framework and ASGI server |
+| `langchain-core` | LangChain foundation for prompt engineering |
+| `langchain-groq` | Groq LLM provider integration |
+| `langgraph` | Multi-agent stateful workflow orchestration |
+| `pandas` + `numpy` | Geospatial data processing and Haversine math |
+| `langchain-google-genai` | Google Gemini integration (optional) |
+| `langchain-xai` | xAI Grok integration (optional) |
+| `faiss-cpu` | Vector similarity search |
+| `python-multipart` | File upload support for FastAPI |
+| `python-dotenv` | Environment variable management |
+
+### 4 — Configure Environment Variables
+
+Create a `.env` file in the project root:
 
 ```bash
-echo "GROQ_API_KEY=your_groq_api_key_here" > .env
+# Required
+GROQ_API_KEY=your_groq_api_key_here
+
+# Optional (for alternative LLM providers)
+GOOGLE_API_KEY=your_google_api_key_here
+XAI_API_KEY=your_xai_api_key_here
 ```
 
-### 3 — Launch
+> You only need `GROQ_API_KEY` to run the system. The other keys are for optional provider support.
+
+### 5 — Launch the Server
 
 ```bash
 uvicorn app:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 4 — Access
+You should see output like:
 
-| URL | Page |
-|:----|:-----|
-| `http://localhost:8000` | Dispatch Portal |
-| `http://localhost:8000/login` | Responder Login |
-| `http://localhost:8000/dashboard` | Command Dashboard |
-| `http://localhost:8000/heatmap` | Global Heatmap |
+```
+INFO:     Uvicorn running on http://0.0.0.0:8000
+INFO:     Application startup complete.
+```
+
+### 6 — Access the Application
+
+| URL | Page | Description |
+|:----|:-----|:------------|
+| `http://localhost:8000` | Dispatch Portal | Submit emergency reports with GPS and voice input |
+| `http://localhost:8000/login` | Responder Login | Authenticate as a police, fire, or medical station |
+| `http://localhost:8000/dashboard` | Command Dashboard | View live incidents, map routing, and resolve cases |
+| `http://localhost:8000/heatmap` | Global Heatmap | Severity-weighted visualization of all historical incidents |
+
+### Troubleshooting
+
+| Issue | Solution |
+|:------|:---------|
+| `ModuleNotFoundError` | Ensure your virtual environment is activated and run `pip install -r requirements.txt` again |
+| `GROQ_API_KEY not found` | Verify the `.env` file exists in the project root with the correct key |
+| Port 8000 already in use | Run with a different port: `uvicorn app:app --reload --port 8001` |
+| CSV load warnings on startup | The system uses fallback data automatically — this is non-blocking |
 
 <br/>
 
