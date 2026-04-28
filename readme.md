@@ -1,102 +1,66 @@
-<p align="center">
-  <img src="https://img.shields.io/badge/🚨_CRISIS_DISPATCH-AI_Emergency_Coordination-dc2626?style=for-the-badge&labelColor=0f172a" alt="Crisis Dispatch" />
-</p>
+<div align="center">
 
-<h1 align="center">
-  🚨 Crisis Dispatch
-</h1>
+# CRISIS DISPATCH
 
-<p align="center">
-  <strong>AI-Powered Emergency Response Coordination System</strong><br/>
-  <em>Triage. Dispatch. Save Lives — in under 3 seconds.</em>
-</p>
+### AI-Powered Emergency Response Coordination
 
-<p align="center">
-  <img src="https://img.shields.io/badge/LangGraph-Agentic_AI-4f46e5?style=flat-square&logo=langchain&logoColor=white" />
-  <img src="https://img.shields.io/badge/Groq-LLaMA_3.3_70B-f97316?style=flat-square&logo=meta&logoColor=white" />
-  <img src="https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat-square&logo=fastapi&logoColor=white" />
-  <img src="https://img.shields.io/badge/Leaflet.js-Maps-199900?style=flat-square&logo=leaflet&logoColor=white" />
-  <img src="https://img.shields.io/badge/SQLite-Persistent_DB-003B57?style=flat-square&logo=sqlite&logoColor=white" />
-  <img src="https://img.shields.io/badge/GDG_Hackathon-2026-ea4335?style=flat-square&logo=google&logoColor=white" />
-</p>
+**Triage. Dispatch. Save Lives — in under 3 seconds.**
 
-<p align="center">
-  <a href="#-demo-flow">Demo</a> •
-  <a href="#-the-problem">Problem</a> •
-  <a href="#-architecture">Architecture</a> •
-  <a href="#-features">Features</a> •
-  <a href="#-tech-stack">Tech Stack</a> •
-  <a href="#-quick-start">Quick Start</a> •
-  <a href="#-api-reference">API</a> •
-  <a href="#-team">Team</a>
-</p>
+<br/>
+
+[![LangGraph](https://img.shields.io/badge/LangGraph-Agentic_Orchestration-4f46e5?style=for-the-badge&logo=langchain&logoColor=white)](https://langchain-ai.github.io/langgraph/)
+[![Groq](https://img.shields.io/badge/Groq-LLaMA_3.3_70B-f97316?style=for-the-badge&logo=meta&logoColor=white)](https://groq.com)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Leaflet](https://img.shields.io/badge/Leaflet.js-Geospatial_Maps-199900?style=for-the-badge&logo=leaflet&logoColor=white)](https://leafletjs.com)
+
+<br/>
+
+[Problem](#the-problem) · [Architecture](#architecture) · [Features](#features) · [Tech Stack](#tech-stack) · [Quick Start](#quick-start) · [API](#api-reference) · [Team](#team)
+
+<br/>
 
 ---
 
-## 💀 The Problem
+</div>
 
-> **Every second counts in an emergency.** Traditional dispatch systems rely on human operators manually triaging calls, looking up nearest hospitals, and coordinating across police, fire, and medical agencies — a process that takes **5–15 minutes**.
+<br/>
+
+## The Problem
+
+> Traditional emergency dispatch relies on human operators manually triaging calls, searching for the nearest hospital, and coordinating across police, fire, and medical agencies — a process that averages **5 to 15 minutes** per incident.
 >
-> In mass casualty events, this delay costs lives.
+> During mass casualty events, every second of that delay can cost a life.
 
-**Crisis Dispatch** replaces this with a fully autonomous AI pipeline that:
+**Crisis Dispatch** eliminates that bottleneck with a fully autonomous AI pipeline:
 
-1. 🎤 Takes a **voice or text** emergency report from any device
-2. 🧠 **AI-triages** the incident in real-time (severity, category, resources needed)
-3. 🗺️ **Geo-dispatches** the 3 optimal response units (medical, fire, police) **simultaneously**
-4. 📡 Pushes live updates to **agency-specific dashboards** with routing + ETA
+| Step | What Happens | Time |
+|:-----|:-------------|:-----|
+| **1. Report** | Civilian submits a voice or text emergency report with GPS coordinates | Instant |
+| **2. AI Triage** | LLM classifies severity, category, victim count, and required resources | ~300ms |
+| **3. Parallel Dispatch** | Three agency-specific dispatch nodes execute simultaneously via LangGraph | ~2s |
+| **4. Live Dashboard** | Assigned stations receive live incident cards with map routing and ETA | Real-time |
 
-**Total time: ~2.5 seconds** from report to dispatch.
+**Total elapsed time from report to dispatch: approximately 2.5 seconds.**
 
----
-
-## 🎬 Demo Flow
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│  👤 CIVILIAN REPORTS EMERGENCY                               │
-│  "Massive fire in hotel kitchen, 3 people with severe burns" │
-│  📍 GPS: 18.9681, 72.8072                                   │
-└───────────────────────┬──────────────────────────────────────┘
-                        ▼
-┌──────────────────────────────────────────────────────────────┐
-│  🧠 AI TRIAGE ENGINE (LangGraph + Groq LLaMA 3.3 70B)       │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │ Category:    FIRE                                       │ │
-│  │ Severity:    CRITICAL                                   │ │
-│  │ Victims:     3                                          │ │
-│  │ Resources:   [fire_engine, burn_unit, trauma_surgeon]   │ │
-│  │ TTS:         "Critical fire at hotel. 3 burn victims.   │ │
-│  │              Dispatch fire & medical immediately."      │ │
-│  └─────────────────────────────────────────────────────────┘ │
-└───────────────────────┬──────────────────────────────────────┘
-                        ▼
-          ┌─────────────┼──────────────┐
-          ▼             ▼              ▼
-    ┌──────────┐  ┌──────────┐  ┌──────────┐
-    │ 🚒 FIRE  │  │ 🏥 MEDIC │  │ 🚓 POLICE│
-    │ Nearest  │  │ Best-fit │  │ Security │
-    │ Station  │  │ Hospital │  │ Backup   │
-    │ 2.3 km   │  │ 4.1 km   │  │ SKIP ✓   │
-    │ ETA: 3m  │  │ ETA: 6m  │  │ Not Req. │
-    └──────────┘  └──────────┘  └──────────┘
-```
+<br/>
 
 ---
 
-## 🏗 Architecture
+<br/>
+
+## Architecture
 
 ### LangGraph Agentic Workflow
 
-This isn't a simple API call. It's a **stateful, multi-agent graph** built with LangGraph:
+This system is not a simple API wrapper around an LLM. It is a **stateful, multi-agent graph** built with LangGraph's `StateGraph`, where each node is an autonomous reasoning unit:
 
 ```mermaid
 graph TD
-    A[📝 Emergency Report] --> B[🧠 TRIAGE NODE]
-    B --> C[🏥 Medical Dispatch Node]
-    B --> D[🚒 Fire Dispatch Node]
-    B --> E[🚓 Police Dispatch Node]
-    C --> F[✅ Response Complete]
+    A["Emergency Report"] --> B["TRIAGE NODE — LLaMA 3.3 70B"]
+    B --> C["Medical Dispatch"]
+    B --> D["Fire Dispatch"]
+    B --> E["Police Dispatch"]
+    C --> F["Response Complete"]
     D --> F
     E --> F
 
@@ -108,152 +72,158 @@ graph TD
     style F fill:#16a34a,stroke:#22c55e,color:#f8fafc
 ```
 
-| Node | What it Does | Intelligence |
-|------|-------------|--------------|
-| **Triage** | Classifies emergency, estimates severity, identifies needed resources | LLaMA 3.3 70B via Groq (structured output) |
-| **Medical** | Finds nearest hospital with matching capabilities | Haversine geospatial + AI matchmaking |
-| **Fire** | Dispatches closest fire station | Haversine + AI capability matching |
-| **Police** | Deploys security response | Conditionally skipped if not needed |
+| Node | Responsibility | Intelligence Layer |
+|:-----|:---------------|:-------------------|
+| **Triage** | Classifies emergency type, severity, victim count, and resource requirements | LLaMA 3.3 70B via Groq — structured Pydantic output |
+| **Medical Dispatch** | Locates optimal hospital based on proximity and capability match | Vectorized Haversine + LLM matchmaking |
+| **Fire Dispatch** | Identifies nearest fire station with appropriate equipment | Vectorized Haversine + LLM matchmaking |
+| **Police Dispatch** | Deploys security response if crisis category warrants it | Conditionally skipped when not required |
 
-> 🔑 **Key Innovation:** The fan-out/fan-in pattern means all 3 dispatch nodes execute **in parallel** after triage — no sequential bottleneck.
+> **Key design decision:** The fan-out / fan-in topology means all three dispatch nodes execute **in parallel** after triage — reducing total latency from ~9 seconds (sequential) to ~3 seconds.
 
-### System Architecture
+<br/>
+
+### End-to-End System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        FRONTEND LAYER                           │
-│  ┌───────────┐  ┌───────────────┐  ┌──────────┐  ┌──────────┐  │
-│  │ SOS Portal│  │ Dispatch Map  │  │ Dashboard│  │ Heatmap  │  │
-│  │ (Voice+   │  │ (Leaflet.js)  │  │ (Agency) │  │ (Global) │  │
-│  │  Text)    │  │               │  │          │  │          │  │
-│  └─────┬─────┘  └───────┬───────┘  └────┬─────┘  └────┬─────┘  │
-│        └────────────────┼───────────────┼──────────────┘        │
-└─────────────────────────┼───────────────┼───────────────────────┘
-                          ▼               ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     FASTAPI BACKEND                             │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │                  LangGraph State Machine                 │   │
-│  │  ┌──────────┐    ┌──────────┐    ┌──────────────────┐    │   │
-│  │  │ Triage   │───▶│ Dispatch │───▶│ Persist to SQLite│    │   │
-│  │  │ (Groq)   │    │ (3 nodes)│    │ + Return JSON    │    │   │
-│  │  └──────────┘    └──────────┘    └──────────────────┘    │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │                  DATA LAYER                              │   │
-│  │  📊 26,000+ Hospitals  │ 🚒 400+ Fire Stations          │   │
-│  │  🚓 15,000+ Police Stations  │ 💾 SQLite Incident DB    │   │
-│  └──────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
+ FRONTEND                          BACKEND                              DATA
+┌──────────────────┐   ┌───────────────────────────────────┐   ┌──────────────────────┐
+│                  │   │                                   │   │                      │
+│  Dispatch Portal │──▶│  FastAPI  ─▶  LangGraph Engine    │──▶│  26,000+ Hospitals   │
+│  (Report + Map)  │   │                                   │   │  15,000+ Police Stn  │
+│                  │   │  ┌─────────┐  ┌───────────────┐   │   │  400+ Fire Stations  │
+│  Responder Login │──▶│  │ Triage  │──│ Parallel      │   │   │                      │
+│                  │   │  │ (Groq)  │  │ Dispatch x3   │   │   │  SQLite Incident DB  │
+│  Command Dash    │◀──│  └─────────┘  └───────┬───────┘   │   │                      │
+│  (Live Feed)     │   │                       │           │   │  Uploaded Evidence    │
+│                  │   │               ┌───────▼───────┐   │   │                      │
+│  Global Heatmap  │◀──│               │ SQLite + JSON │   │   └──────────────────────┘
+│                  │   │               └───────────────┘   │
+└──────────────────┘   └───────────────────────────────────┘
 ```
+
+<br/>
 
 ---
 
-## ✨ Features
+<br/>
 
-### 🎯 Core Engine
+## Features
 
-| Feature | Description |
-|---------|-------------|
-| **AI Triage** | Structured LLM output → `{category, severity, victims, resource_vector, tts_summary}` |
-| **Multi-Agency Parallel Dispatch** | LangGraph fan-out dispatches medical, fire, police simultaneously |
-| **Geospatial Matchmaking** | Vectorized Haversine distance + LLM capability reasoning for optimal unit selection |
-| **Real-Time ETA** | Distance-based ETA calculation with live countdown on dashboard |
+### Dispatch Engine
 
-### 🖥️ User Interfaces
+| Capability | Description |
+|:-----------|:------------|
+| **Structured AI Triage** | LLM extracts `{category, severity, victims, resource_vector, tts_summary}` with Pydantic-enforced schema |
+| **Multi-Agency Parallel Dispatch** | LangGraph simultaneously dispatches medical, fire, and police units |
+| **Geospatial Matchmaking** | Vectorized Haversine across 40K+ stations, narrowed to 5 candidates, then LLM selects the best-fit |
+| **Distance-Based ETA** | Real-time arrival estimates calculated from Haversine distance |
+| **Conditional Routing** | Police/fire nodes are intelligently skipped when the crisis category doesn't require them |
 
-| Page | Purpose |
-|------|---------|
-| **Dispatch Portal** (`/`) | 3-column layout: GPS + report input → live map → helpline sidebar |
-| **Responder Login** (`/login`) | Authenticated agency access (validates against real station datasets) |
-| **Command Dashboard** (`/dashboard`) | Live incident feed, interactive map, severity stats, PDF report export |
-| **Global Heatmap** (`/heatmap`) | Severity-weighted heat visualization of all historical incidents |
+### User Interfaces
 
-### 🛠️ Supporting Features
+| Page | Route | Purpose |
+|:-----|:------|:--------|
+| **Dispatch Portal** | `/` | Three-column layout — GPS input, incident report (voice + text), live map with unit routing |
+| **Responder Login** | `/login` | Authenticated access for agencies — validates against real station datasets |
+| **Command Dashboard** | `/dashboard` | Live incident feed, interactive map, severity statistics, incident resolution, PDF export |
+| **Global Heatmap** | `/heatmap` | Severity-weighted heat visualization of all historical incidents on a dark-themed map |
 
-- 🎤 **Speech-to-Text** — Browser-native voice transcription for hands-free reporting
-- 📎 **File/Image Upload** — Attach evidence to incident reports
-- 📄 **PDF Report Generation** — One-click incident reports via jsPDF
-- 🗺️ **Interactive Mapping** — Leaflet.js with custom markers, route lines, and popups
-- 🔄 **Auto-Refresh Polling** — Dashboard updates every 5 seconds
-- 📱 **Responsive Design** — Works on desktop, tablet, and mobile
-- ✅ **Incident Resolution** — Mark incidents as resolved from the dashboard
-- 📞 **Emergency Helplines Panel** — Quick-access to 100, 101, 102, 108
+### Additional Capabilities
+
+- **Speech-to-Text Input** — Browser-native Web Speech API for hands-free emergency reporting
+- **Evidence Upload** — Attach images or documents to incident reports
+- **PDF Report Generation** — One-click downloadable incident reports via jsPDF
+- **Interactive Mapping** — Custom Leaflet.js markers, dashed route lines, and informational popups
+- **Auto-Refresh Polling** — Dashboard updates every 5 seconds without manual intervention
+- **Incident Resolution** — Responders can mark incidents as resolved from their dashboard
+- **Emergency Helplines** — Quick-access panel for national helpline numbers (100, 101, 102, 108)
+- **Responsive Design** — Functional across desktop, tablet, and mobile viewports
+
+<br/>
 
 ---
 
-## 🧪 Tech Stack
+<br/>
 
-| Layer | Technology | Why |
-|-------|-----------|-----|
-| **AI / LLM** | Groq (LLaMA 3.3 70B Versatile) | Fastest inference for real-time triage (~300ms) |
-| **Orchestration** | LangGraph (StateGraph) | Stateful multi-agent workflow with parallel fan-out |
-| **Structured Output** | LangChain + Pydantic | Type-safe AI responses — no regex parsing |
-| **Backend** | FastAPI | Async Python, auto-docs, perfect for AI pipelines |
-| **Database** | SQLite | Zero-config persistent storage for incident records |
-| **Geospatial** | NumPy + Pandas (Haversine) | Vectorized distance computation across 40,000+ stations |
-| **Maps** | Leaflet.js + CartoDB Tiles | Lightweight, open-source, beautiful dark/light themes |
-| **Heatmap** | Leaflet.heat | Severity-weighted heat visualization |
-| **Voice** | Web Speech API | Browser-native, zero-dependency STT |
-| **Reports** | jsPDF | Client-side PDF generation |
+## Tech Stack
 
-### 📊 Datasets
+| Layer | Technology | Rationale |
+|:------|:-----------|:----------|
+| **LLM Inference** | Groq — LLaMA 3.3 70B Versatile | Fastest available inference (~300ms) for real-time triage |
+| **Agent Orchestration** | LangGraph `StateGraph` | Enables stateful, parallel multi-agent workflows with fan-out/fan-in |
+| **Structured Output** | LangChain + Pydantic | Type-safe LLM responses — no fragile regex parsing |
+| **Backend** | FastAPI | Async-native, auto-generated OpenAPI docs, ideal for AI service layers |
+| **Database** | SQLite | Zero-configuration persistent storage for incident records |
+| **Geospatial** | NumPy + Pandas (Haversine) | Vectorized distance computation across 40,000+ stations in milliseconds |
+| **Mapping** | Leaflet.js + CartoDB Tiles | Open-source, lightweight, supports custom markers and heatmaps |
+| **Heatmap** | Leaflet.heat | Severity-weighted gradient visualization |
+| **Voice Input** | Web Speech API | Zero-dependency, browser-native speech recognition |
+| **Reports** | jsPDF | Client-side PDF generation without server overhead |
+
+### Datasets
 
 | Dataset | Records | Source |
-|---------|---------|--------|
+|:--------|:--------|:-------|
 | India Hospital Directory | ~26,000 hospitals | Government open data (cleaned) |
 | India Police Stations | ~15,000 stations | Government open data |
 | India Fire Stations | ~400 stations | OpenStreetMap extract |
 
+<br/>
+
 ---
 
-## 🚀 Quick Start
+<br/>
+
+## Quick Start
 
 ### Prerequisites
 
 - Python 3.10+
-- A [Groq API Key](https://console.groq.com) (free tier works)
+- A [Groq API Key](https://console.groq.com) (free tier is sufficient)
 
-### 1. Clone & Install
+### 1 — Clone and Install
 
 ```bash
 git clone https://github.com/taher51-lang/crisis-dispatch.git
 cd crisis-dispatch
-pip install -r requirements.txt   # or install manually:
-# pip install fastapi uvicorn pandas numpy langchain langchain-groq langgraph python-dotenv pydantic
+pip install -r requirements.txt
 ```
 
-### 2. Configure Environment
+### 2 — Configure Environment
 
 ```bash
-# Create .env file
 echo "GROQ_API_KEY=your_groq_api_key_here" > .env
 ```
 
-### 3. Run
+### 3 — Launch
 
 ```bash
 uvicorn app:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 4. Open
+### 4 — Access
 
 | URL | Page |
-|-----|------|
-| `http://localhost:8000` | 🚨 Dispatch Portal |
-| `http://localhost:8000/login` | 🔐 Responder Login |
-| `http://localhost:8000/dashboard` | 📊 Command Dashboard |
-| `http://localhost:8000/heatmap` | 🗺️ Global Heatmap |
+|:----|:-----|
+| `http://localhost:8000` | Dispatch Portal |
+| `http://localhost:8000/login` | Responder Login |
+| `http://localhost:8000/dashboard` | Command Dashboard |
+| `http://localhost:8000/heatmap` | Global Heatmap |
+
+<br/>
 
 ---
 
-## 📡 API Reference
+<br/>
+
+## API Reference
 
 ### `POST /api/v1/triage`
 
-The main dispatch endpoint. Accepts an emergency report and returns full triage + multi-agency dispatch.
+Primary dispatch endpoint. Accepts an emergency report and returns structured triage analysis with multi-agency dispatch decisions.
 
-**Request:**
+**Request**
 ```json
 {
   "latitude": 18.9681,
@@ -263,12 +233,15 @@ The main dispatch endpoint. Accepts an emergency report and returns full triage 
 }
 ```
 
-**Response:**
+**Response**
 ```json
 {
   "id": "INC-A3F2B1C8",
   "timestamp": "2026-04-28T06:00:00.000Z",
-  "user_location": { "latitude": 18.9681, "longitude": 72.8072 },
+  "user_location": {
+    "latitude": 18.9681,
+    "longitude": 72.8072
+  },
   "triage_analysis": {
     "crisis_category": "FIRE",
     "severity_level": "CRITICAL",
@@ -291,109 +264,138 @@ The main dispatch endpoint. Accepts an emergency report and returns full triage 
       "estimated_eta_minutes": 3,
       "ai_reasoning": "Nearest fire station with full suppression equipment."
     },
-    "police": { "status": "Not Required" }
+    "police": {
+      "status": "Not Required"
+    }
   }
 }
 ```
 
-### Other Endpoints
+### Supporting Endpoints
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/v1/login` | Responder authentication against station datasets |
-| `GET` | `/api/v1/incidents/{station}` | Fetch incidents assigned to a specific station |
+|:-------|:---------|:------------|
+| `POST` | `/api/v1/login` | Authenticate responders against station datasets |
+| `GET` | `/api/v1/incidents/{station}` | Retrieve incidents assigned to a specific station |
 | `POST` | `/api/v1/incidents/{id}/resolve` | Mark an incident as resolved |
-| `GET` | `/api/v1/all_incidents` | Fetch all incidents (for heatmap) |
-| `POST` | `/api/v1/upload` | Upload media/evidence files |
+| `GET` | `/api/v1/all_incidents` | Retrieve all incidents (heatmap data source) |
+| `POST` | `/api/v1/upload` | Upload media or evidence files |
+
+<br/>
 
 ---
 
-## 🧠 How the AI Works
+<br/>
 
-### Step 1: Structured Triage (LLM)
+## How the AI Pipeline Works
 
-The user's raw report is sent to **LLaMA 3.3 70B** via Groq with a system prompt that forces structured JSON output matching our Pydantic schema:
+### Step 1 — Structured Triage
+
+The user's raw report is sent to **LLaMA 3.3 70B** via Groq with a system prompt that forces structured JSON output conforming to a Pydantic schema:
 
 ```python
 class EmergencyPayload(BaseModel):
     crisis_category: Literal["MEDICAL", "FIRE", "SECURITY", "CHEMICAL", "STRUCTURAL", "NATURAL_DISASTER"]
     severity_level: Literal["LOW", "MODERATE", "HIGH", "CRITICAL", "MASS_CASUALTY"]
     estimated_victims: int
-    resource_vector: List[str]  # ["trauma_surgeon", "fire_engine", ...]
-    tts_summary: str
+    resource_vector: List[str]    # e.g. ["trauma_surgeon", "fire_engine"]
+    tts_summary: str              # Concise 2-sentence summary for text-to-speech
 ```
 
-### Step 2: Geospatial Filtering (Pandas + NumPy)
+### Step 2 — Geospatial Filtering
 
-For each agency type, we compute vectorized Haversine distances across the entire dataset (40k+ stations) and extract the **5 closest candidates**.
+For each agency type (medical, fire, police), the system computes **vectorized Haversine distances** across the full dataset and extracts the **5 closest candidates** in under 10ms.
 
-### Step 3: AI Matchmaking (LLM)
+### Step 3 — AI Matchmaking
 
-The 5 closest candidates + required resources are sent to a second LLM call that **reasons about capability matching**:
+Those 5 candidates and the required resource vector are sent to a second LLM invocation that reasons about **capability alignment**:
 
-> *"Holy Family Hospital is the optimal choice because its stated burn unit and trauma surgery capabilities directly match the required resources, and it is only 4.12 km away."*
+> *"Holy Family Hospital is the optimal choice because its stated burn unit and trauma surgery capabilities directly match the required resources, and it is the closest facility at 4.12 km."*
 
-### Step 4: Parallel Execution
+### Step 4 — Parallel Execution
 
-LangGraph's `StateGraph` executes all three dispatch nodes **in parallel** after triage completes, reducing total latency from ~9s (sequential) to ~3s.
+LangGraph's `StateGraph` executes all three dispatch nodes **concurrently** after triage completes, cutting total pipeline latency from ~9 seconds (sequential) to ~3 seconds (parallel).
+
+<br/>
 
 ---
 
-## 📁 Project Structure
+<br/>
+
+## Project Structure
 
 ```
 crisis-dispatch/
-├── app.py                  # FastAPI backend + LangGraph workflow (643 lines)
-├── index.html              # SOS Portal (standalone emergency page)
-├── .env                    # API keys (Groq, etc.)
+├── app.py                          # FastAPI backend + LangGraph workflow engine
+├── index.html                      # Standalone SOS portal page
+├── .env                            # API keys (Groq, Google, etc.)
+│
 ├── templates/
-│   ├── index.html          # Main dispatch portal (3-column layout)
-│   ├── login.html          # Responder authentication
-│   ├── dashboard.html      # Command center dashboard
-│   └── heatmap.html        # Global incident heatmap
+│   ├── index.html                  # Main dispatch portal — 3-column layout
+│   ├── login.html                  # Responder authentication page
+│   ├── dashboard.html              # Agency command center dashboard
+│   └── heatmap.html                # City-wide incident heatmap
+│
 ├── static/
-│   ├── app.js              # Frontend dispatch logic + map rendering
-│   └── styles.css          # Shared design system
+│   ├── app.js                      # Frontend dispatch logic and map rendering
+│   └── styles.css                  # Shared design system and components
+│
 ├── data/
-│   ├── hospital_directory_cleaned.csv   # 26K hospitals
-│   ├── INDIA_POLICE_STATIONS.csv        # 15K police stations
-│   └── OpenStreetMap_-_Fire_Station.csv  # 400+ fire stations
+│   ├── hospital_directory_cleaned.csv    # ~26,000 hospitals
+│   ├── INDIA_POLICE_STATIONS.csv         # ~15,000 police stations
+│   └── OpenStreetMap_-_Fire_Station.csv  # ~400 fire stations
+│
 ├── database/
-│   └── dispatch_v2.db      # SQLite incident persistence
-├── uploads/                # Uploaded evidence files
+│   └── dispatch_v2.db              # SQLite persistent incident storage
+│
+├── uploads/                        # Uploaded evidence files
 └── tests/
-    └── test_csv.py          # Dataset validation
+    └── test_csv.py                 # Dataset validation tests
 ```
 
----
-
-## 🏆 What Makes This Hackathon-Worthy
-
-| Dimension | What We Did |
-|-----------|-------------|
-| **Technical Depth** | LangGraph multi-agent state machine with parallel fan-out/fan-in, not a basic API wrapper |
-| **Real Data** | 40,000+ actual government stations — not mock data |
-| **AI Innovation** | Dual-LLM pipeline: structured triage → capability-aware matchmaking |
-| **Full Stack** | 4 production-quality UI pages with maps, charts, PDF export |
-| **Sub-3s Latency** | Groq inference + parallel dispatch = real-time emergency response |
-| **Impact** | Directly applicable to NDMA, municipal fire departments, hospital networks |
+<br/>
 
 ---
 
-## 🛣️ Roadmap
+<br/>
 
-- [ ] 🔔 WebSocket push notifications (replace polling)
-- [ ] 📱 Progressive Web App (PWA) with offline caching
-- [ ] 🗣️ Multilingual voice input (Hindi, Gujarati, Tamil)
-- [ ] 📸 AI image analysis of uploaded evidence (damage assessment)
-- [ ] 🤝 Inter-agency resource sharing protocol
-- [ ] 📊 Analytics dashboard with historical trend analysis
+## Why This Project Stands Out
+
+| Dimension | What We Built |
+|:----------|:-------------|
+| **Technical Depth** | LangGraph multi-agent state machine with parallel fan-out/fan-in — not a basic LLM API wrapper |
+| **Real-World Data** | 40,000+ actual government-sourced stations — zero mock data |
+| **Dual-LLM Pipeline** | Structured triage followed by capability-aware matchmaking — two distinct reasoning steps |
+| **Full-Stack Delivery** | Four production-quality UI pages with maps, live feeds, PDF export, and responsive layouts |
+| **Sub-3s Latency** | Groq inference + parallel dispatch = response times suitable for genuine emergency use |
+| **Social Impact** | Directly applicable to NDMA, municipal fire departments, and hospital networks across India |
+
+<br/>
 
 ---
 
-## 👥 Team
+<br/>
 
-Built with ❤️ and urgency at **GDG Hackathon 2026**
+## Roadmap
+
+- [ ] WebSocket push notifications to replace polling
+- [ ] Progressive Web App (PWA) with offline incident caching
+- [ ] Multilingual voice input — Hindi, Gujarati, Tamil, and more
+- [ ] AI-powered image analysis for uploaded evidence (damage assessment)
+- [ ] Inter-agency resource sharing and coordination protocol
+- [ ] Historical analytics dashboard with trend analysis
+
+<br/>
+
+---
+
+<br/>
+
+## Team
+
+Built at **GDG Hackathon 2026**.
+
+<br/>
 
 ---
 
